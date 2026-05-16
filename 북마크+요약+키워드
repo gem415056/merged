@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         크랙 AI요약 & 북마크 & 키워드노트 통합본 (3 in 1)
 // @namespace    https://crack.wrtn.ai/
-// @version      4.1.4
-// @description  키워드노트 실시간 동기화 완벽 패치 (리액트 상태 강제 업데이트 적용)
+// @version      4.1.5
+// @description  키워드노트 실시간 동기화 완벽 패치 (리액트 상태 강제 업데이트 적용) + 헤더 버튼 위치 및 아이콘 변경
 // @author       Assistant
 // @match        https://crack.wrtn.ai/*
 // @grant        GM_addStyle
@@ -210,7 +210,7 @@
             
             const btn = document.createElement('button');
             btn.className = 'crack-ext-bm-btn crack-uni-btn';
-            btn.innerHTML = `♡`; 
+            btn.innerHTML = `♥︎`; // 꽉 찬 하트로 변경 (북마크)
             btn.title = '북마크';
             
             btn.onclick = (e) => { 
@@ -219,7 +219,10 @@
                 openModal(); 
             };
             
-            headerContainer.prepend(btn);
+            // 요약 버튼(AI 버튼)이 있으면 그 뒤에(오른쪽에) 추가, 없으면 맨 앞에 추가
+            const aiBtn = headerContainer.querySelector('.crack-ext-ai-btn');
+            if (aiBtn) aiBtn.after(btn);
+            else headerContainer.prepend(btn);
         }
 
         function addBookmarkDirect(text, colorHex) {
@@ -478,7 +481,7 @@
                 btn.onclick = () => { currentFolderId = btn.dataset.fid; if(isDeleteMode) selectedForDelete.clear(); if(isMoveMode) selectedForMove.clear(); renderFolderTabs(); renderBookmarkList(); };
                 btn.oncontextmenu = (e) => {
                     e.preventDefault();
-                    if(btn.dataset.fid === 'default') return alert("기본 폴더는 수정할 수 없습니다.");
+                    if(btn.dataset.fid === 'default') return alert("기본 폴더는 수정할 수 정할 수 없습니다.");
                     const action = prompt("폴더 옵션:\n1: 이름 변경\n2: 폴더 삭제(북마크는 기본폴더로 이동)", "1");
                     if (action === "1") {
                         const nn = prompt("새 폴더 이름", btn.textContent);
@@ -1301,7 +1304,7 @@
 ### 1. 제목 규칙 (최고 중요도: 시맨틱 검색 최적화)
 - **제한**: 공백 포함 **20자 이내 최대 활용**. 조사(~의, ~와, ~에서) 및 특수기호(# 등) 사용 금지.
 - **형식 고정**: 유저명은 제외하고 관련된 **NPC명(필수)**을 포함하되, **세력명/국가명/소재/핵심행동** 등 검색에 유의미한 고유명사를 띄어쓰기로 나열. (날짜/시간 및 주관적 감정 기재 금지)
-- 제목은 항상 []로 가둘 것. []는 20자 제한에 미포함, 대괄호[] 안의 내용 기준 공백 포함 20자 제한.
+- 제목은 항상 []로 가둘 일 것. []는 20자 제한에 미포함, 대괄호[] 안의 내용 기준 공백 포함 20자 제한.
 
 ### 2. 내용 규칙
 - **제한**: 공백 포함 **500자 이내**. **요약체(~함, ~임)**를 사용할 것.
@@ -1830,12 +1833,13 @@
             
             const btn = document.createElement('button');
             btn.className = 'crack-ext-ai-btn crack-uni-btn'; 
-            btn.innerHTML = '♥'; // 요약 버튼은 꽉 찬 하트 유지
+            btn.innerHTML = '♡'; // 빈 하트로 변경 (AI 요약)
             btn.title = 'AI 요약';
             btn.addEventListener('click', (e) => { e.stopPropagation(); e.preventDefault(); showAiSummaryModal(); });
             
+            // 북마크 버튼이 있으면 그 앞에(왼쪽에) 추가, 없으면 맨 앞에 추가
             const bmBtn = headerContainer.querySelector('.crack-ext-bm-btn');
-            if (bmBtn) bmBtn.after(btn);
+            if (bmBtn) bmBtn.before(btn);
             else headerContainer.prepend(btn);
         }
 
