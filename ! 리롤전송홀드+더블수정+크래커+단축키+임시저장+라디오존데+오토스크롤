@@ -1,8 +1,8 @@
 // ==UserScript==
-// @name         크랙 8 in 1 통합팩 (V7.0.5 - 수정창 이사 방지 패치)
+// @name         크랙 8 in 1 통합팩 (V7.0.6 - 화면 흐려짐 레이어 동기화 완료)
 // @namespace    https://crack.wrtn.ai/
-// @version      7.0.5
-// @description  입력창 외부 좌(크래커)·우(라디오존데) 고정 및 수정창 활성 시 위치 틀어짐 방지 패치 완료
+// @version      7.0.6
+// @description  입력창 외부 좌(크래커)·우(라디오존데) 고정 및 수정창 이사 방지, 배경 흐려짐 시 자연스럽게 묻히도록 레이어(z-index) 조정 완료
 // @author       User & Gemini (수정)
 // @match        https://crack.wrtn.ai/*
 // @grant        GM_addStyle
@@ -292,7 +292,7 @@
     }
 
     // ==========================================
-    // 모듈 4: 외부 좌측 배치 턴수 & 크래커 표시기 (진짜 입력창 판별 적용)
+    // 모듈 4: 외부 좌측 배치 턴수 & 크래커 표시기 (z-index 레이어 조정)
     // ==========================================
     function initTurnCracker() {
         const SELECTOR = {
@@ -325,8 +325,9 @@
             if (document.getElementById('info-display-base-style')) return;
             const style = document.createElement('style');
             style.id = 'info-display-base-style';
+            // z-index를 998에서 10으로 낮춰서 배경이 흐려질 때 같이 묻히도록 수정
             style.textContent = `
-            #my-custom-info-display { position: absolute; box-sizing: border-box; font-family: 'Pretendard', sans-serif; font-size: 11px; font-weight: 500; pointer-events: none; z-index: 998; display: flex; align-items: center; border-radius: 12px; }
+            #my-custom-info-display { position: absolute; box-sizing: border-box; font-family: 'Pretendard', sans-serif; font-size: 11px; font-weight: 500; pointer-events: none; z-index: 10; display: flex; align-items: center; border-radius: 12px; }
             #my-custom-info-display #my-counter-text { display: flex; align-items: center; gap: 0; }
             .my-counter-part { all: unset; display: inline-flex; align-items: center; border-radius: 4px; padding: 1px 4px; user-select: none; }
             .my-counter-separator { opacity: 0.3; margin: 0 2px; user-select: none; }
@@ -421,7 +422,7 @@
 
         function updateTurnCount() {
             const now = Date.now();
-            const inputEl = getSafeMainInput(); // 진짜 입력창만 찾기
+            const inputEl = getSafeMainInput();
             if (!inputEl) { counterBadge?.remove(); counterBadge = null; currentInput = null; return; }
             if (!counterBadge || currentInput !== inputEl || !counterBadge.parentElement) initUI(inputEl);
             if (!counterBadge || !textSpan) return;
@@ -739,7 +740,7 @@
     }
 
     // ==========================================
-    // 모듈 7: 라디오존데 (외부 우측 배치, 진짜 입력창 판별 적용)
+    // 모듈 7: 라디오존데 (외부 우측 배치, z-index 레이어 조정)
     // ==========================================
     function initRadiosonde() {
         const MODELS = [
@@ -754,10 +755,11 @@
         const POLL_MS = 60 * 1000;
         const STORE_KEY_VISIBILITY = "igx_rs_inline_vis";
 
+        // z-index를 998에서 10으로 낮춰서 배경 흐려짐 시 같이 묻히도록 수정
         GM_addStyle(`
             #igx-rs-inline-host {
                 position: absolute; display: flex; align-items: center; gap: 4px;
-                z-index: 998; pointer-events: none; font-family: system-ui, -apple-system, Segoe UI, Roboto, "Noto Sans KR", Arial;
+                z-index: 10; pointer-events: none; font-family: system-ui, -apple-system, Segoe UI, Roboto, "Noto Sans KR", Arial;
                 font-size: 11px; font-weight: 500;
             }
             #igx-rs-inline-host * { pointer-events: auto; }
@@ -911,7 +913,7 @@
         }
 
         function ensureAttached() {
-            const inputEl = getSafeMainInput(); // 진짜 입력창만 찾기
+            const inputEl = getSafeMainInput();
             if (!inputEl) {
                 if (host.parentElement) host.remove();
                 return;
