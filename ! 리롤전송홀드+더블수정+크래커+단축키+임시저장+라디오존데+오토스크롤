@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         크랙 8 in 1 통합팩 (V7.0 완벽 안정화 / 오토스크롤 포함 및 크래커 소모량 픽스)
 // @namespace    https://crack.wrtn.ai/
-// @version      7.0.1
-// @description  입력창 외부 좌(크래커)·우(라디오존데) 대칭 배치 및 라디오존데 팝업 상향 표시, UI 개선, 오토스크롤 버튼 추가, 크래커 즉각 계산 적용
+// @version      7.0.2
+// @description  입력창 외부 좌(크래커)·우(라디오존데) 대칭 배치 및 라디오존데 팝업 상향 표시, UI 개선, 오토스크롤 버튼 추가, 크래커 즉각 계산 적용, 네이티브 단축어(\) 버튼 보존 및 재배치
 // @author       User & Gemini (수정)
 // @match        https://crack.wrtn.ai/*
 // @grant        GM_addStyle
@@ -280,7 +280,7 @@
     }
 
     // ==========================================
-    // 모듈 4: 외부 좌측 배치 턴수 & 크래커 표시기 (가벼운 직관적 계산 방식 적용)
+    // 모듈 4: 외부 좌측 배치 턴수 & 크래커 표시기
     // ==========================================
     function initTurnCracker() {
         const SELECTOR = {
@@ -300,7 +300,6 @@
         let updateTimer, observer, lastRenderedText = '';
         let cachedTurns, cachedTotalMessages, isCalculatingTurns = false, lastCalculatedTime = 0, lastChatId;
         
-        // 크래커 소모량 계산용 변수 (API 내역 방식 대신 직관적인 마이너스 계산 적용)
         let lastKnownTotalCrackers = null;
         let lastConsumedAmount = 0;
         let lastProcessedTurns = -1;
@@ -421,7 +420,7 @@
                 forceCalculate = true; 
                 cachedTurns = null; 
                 cachedTotalMessages = null; 
-                lastConsumedAmount = 0; // 방이 바뀌면 소모량 표기 리셋
+                lastConsumedAmount = 0; 
                 lastProcessedTurns = -1; 
             }
 
@@ -455,20 +454,16 @@
             let displayTurns = cachedTurns ?? Math.floor(document.querySelectorAll(SELECTOR.messageGroup).length / 2);
             let html = '';
 
-            // 1. 턴수 표시
             html += `<div class="my-counter-part">${ICON.clock}<span style="font-weight:700;">${displayTurns > 0 ? displayTurns : '0'}</span>턴</div>`;
 
-            // 2. 총 크래커 표시 및 소모량 계산 (현재 표시된 크래커 갯수 기준 즉각 계산)
             const crackerCount = getCrackerCount();
             if (crackerCount !== null) {
                 if (lastKnownTotalCrackers === null) {
-                    lastKnownTotalCrackers = crackerCount; // 첫 시작 시 기준점 저장
+                    lastKnownTotalCrackers = crackerCount; 
                 } else if (crackerCount < lastKnownTotalCrackers) {
-                    // 이전보다 줄어들었다면, 그 차이가 바로 방금 소모된 양
                     lastConsumedAmount = lastKnownTotalCrackers - crackerCount;
-                    lastKnownTotalCrackers = crackerCount; // 다음 계산을 위해 최신값으로 업데이트
+                    lastKnownTotalCrackers = crackerCount; 
                 } else if (crackerCount > lastKnownTotalCrackers) {
-                    // 크래커가 늘어났다면 (충전, 출석 등) 기준점만 갱신
                     lastKnownTotalCrackers = crackerCount;
                 }
 
@@ -476,7 +471,6 @@
                 html += `<div class="my-counter-part" style="color: #FFA600;">${ICON.cracker}<span style="font-weight:700;">${crackerCount.toLocaleString()}</span>개</div>`;
             }
 
-            // 3. 소모 크래커 표시
             html += `<span class="my-counter-separator">|</span>`;
             html += `<div class="my-counter-part" style="color:#ff9b9b;">${ICON.bittenCracker}<span style="font-weight:700;">${lastConsumedAmount}</span>개</div>`;
 
@@ -490,7 +484,7 @@
     }
 
     // ==========================================
-    // 모듈 5: 고정형 RP 대사 입력 도우미 (+오토스크롤 버튼 및 대칭 조절, 점선 추가)
+    // 모듈 5: 고정형 RP 대사 입력 도우미 (+단축어 네이티브 보존 및 오토스크롤 배치 개선)
     // ==========================================
     function initRPToolbar() {
         const fixedTools = [
@@ -503,6 +497,7 @@
             { icon: '♧', pre: '(OOC：', suf: ')' }
         ];
 
+        // 충돌 방지 및 안전한 재배치를 위해 Flex 속성(order) 사용
         if (!document.getElementById('hide-native-rp-btns')) {
             const style = document.createElement('style');
             style.id = 'hide-native-rp-btns';
@@ -510,6 +505,14 @@
                 .igx-rp-container-hooked > button:not(.igx-keep-btn) {
                     display: none !important;
                 }
+                .igx-rp-container-hooked {
+                    display: flex !important;
+                    align-items: center;
+                }
+                .igx-order-1 { order: 1 !important; }
+                .igx-order-2 { order: 2 !important; }
+                .igx-order-3 { order: 3 !important; }
+                .igx-order-4 { order: 4 !important; }
             `;
             document.head.appendChild(style);
         }
@@ -583,44 +586,53 @@
                 btnContainer.classList.add('igx-rp-container-hooked');
             }
 
+            // [네이티브] "추천답변" 버튼 살리기 및 가장 뒤로 배치(order-4)
             const recommendBtn = Array.from(btnContainer.querySelectorAll('button')).find(btn => btn.textContent.includes('추천답변'));
             if (recommendBtn && !recommendBtn.classList.contains('igx-keep-btn')) {
-                recommendBtn.classList.add('igx-keep-btn');
+                recommendBtn.classList.add('igx-keep-btn', 'igx-order-4');
             }
 
-            if (!document.getElementById('custom-rp-tools')) {
-                const toolWrapper = document.createElement('div');
-                toolWrapper.id = 'custom-rp-tools';
-                
-                toolWrapper.className = 'flex items-center gap-1';
+            // [네이티브] 새로 추가된 단축어 "\" 버튼 살리기 및 오토스크롤 뒤로 배치(order-2)
+            const slashBtn = Array.from(btnContainer.querySelectorAll('button')).find(btn => btn.textContent.includes('\\'));
+            if (slashBtn && !slashBtn.classList.contains('igx-keep-btn')) {
+                slashBtn.classList.add('igx-keep-btn', 'igx-order-2');
+            }
 
-                // 1. 오토스크롤 버튼 껍데기 (텍스트 '△')
+            // [커스텀] 오토스크롤 버튼 래퍼 (가장 앞 배치: order-1)
+            if (!document.getElementById('custom-auto-scroll-wrapper')) {
+                const autoScrollWrapper = document.createElement('div');
+                autoScrollWrapper.id = 'custom-auto-scroll-wrapper';
+                autoScrollWrapper.className = 'igx-order-1 flex items-center gap-1';
+
                 const autoScrollBtn = document.createElement('button');
                 autoScrollBtn.id = 'turbo-scroll-btn';
                 autoScrollBtn.className = "relative inline-flex items-center justify-center rounded-full text-sm font-medium transition-colors border border-border bg-card text-line-gray-1 hover:bg-secondary p-0 size-7";
                 autoScrollBtn.innerHTML = `<span style="font-size:15px;">△</span>`;
-                toolWrapper.appendChild(autoScrollBtn);
+                autoScrollWrapper.appendChild(autoScrollBtn);
 
-                // 2. 오토스크롤과 ★ 사이에 구분선 (점선) 추가, 양옆 마진으로 1.5배 이상 간격 형성
+                btnContainer.appendChild(autoScrollWrapper);
+            }
+
+            // [커스텀] 점선 및 매크로 버튼들 래퍼 (\ 버튼 뒤쪽 배치: order-3)
+            if (!document.getElementById('custom-rp-tools')) {
+                const toolWrapper = document.createElement('div');
+                toolWrapper.id = 'custom-rp-tools';
+                toolWrapper.className = 'igx-order-3 flex items-center gap-1';
+
                 const divider = document.createElement('div');
                 divider.style.width = '1px';
                 divider.style.height = '14px';
                 divider.style.borderLeft = '1px dashed currentColor';
                 divider.style.opacity = '0.3';
-                divider.style.margin = '0 8px'; // 양옆에 넉넉하게 공간 부여
+                divider.style.margin = '0 8px'; 
                 toolWrapper.appendChild(divider);
 
-                // 3. 기존 커스텀 툴바 버튼 추가
                 fixedTools.forEach((t) => {
                     const btn = createToolButton(t.icon, () => wrapText(t.pre, t.suf));
                     toolWrapper.appendChild(btn);
                 });
 
-                if (recommendBtn) {
-                    btnContainer.insertBefore(toolWrapper, recommendBtn);
-                } else {
-                    btnContainer.appendChild(toolWrapper);
-                }
+                btnContainer.appendChild(toolWrapper);
             }
         }, 500);
     }
