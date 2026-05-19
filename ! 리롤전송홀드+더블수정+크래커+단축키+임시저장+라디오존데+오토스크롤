@@ -1,8 +1,8 @@
 // ==UserScript==
-// @name         크랙 8 in 1 통합팩 (V7.0.4 - 커서 위치 수정 완료)
+// @name         크랙 8 in 1 통합팩 (V7.0.5 - 수정창 이사 방지 패치)
 // @namespace    https://crack.wrtn.ai/
-// @version      7.0.4
-// @description  입력창 외부 좌(크래커)·우(라디오존데) 대칭 배치 및 라디오존데 팝업 상향 표시, UI 개선, 오토스크롤 버튼 추가, 크래커 즉각 계산 적용, 네이티브 '/' 버튼 위치 조정 (커서 위치 픽스)
+// @version      7.0.5
+// @description  입력창 외부 좌(크래커)·우(라디오존데) 고정 및 수정창 활성 시 위치 틀어짐 방지 패치 완료
 // @author       User & Gemini (수정)
 // @match        https://crack.wrtn.ai/*
 // @grant        GM_addStyle
@@ -15,6 +15,18 @@
 
 (function () {
     'use strict';
+
+    // [도움함수] 여러 입력창 중 '진짜 메인 입력창'만 골라내는 기능
+    function getSafeMainInput() {
+        const inputs = document.querySelectorAll('textarea[placeholder*="메시지"], div.__chat_input_textarea, .tiptap.ProseMirror');
+        for (const el of inputs) {
+            // 메시지 수정창(data-message-group-id 내부)에 들어있는 입력창은 무시합니다.
+            if (el.closest('div[data-message-group-id]')) continue;
+            // 적절한 부모 컨테이너가 있는 것만 선택합니다.
+            if (el.closest(".flex.w-full.flex-col")) return el;
+        }
+        return null;
+    }
 
     // ==========================================
     // 모듈 1: 더블클릭 수정 기능
@@ -280,11 +292,10 @@
     }
 
     // ==========================================
-    // 모듈 4: 외부 좌측 배치 턴수 & 크래커 표시기
+    // 모듈 4: 외부 좌측 배치 턴수 & 크래커 표시기 (진짜 입력창 판별 적용)
     // ==========================================
     function initTurnCracker() {
         const SELECTOR = {
-            input: 'textarea[placeholder*="메시지"], div.__chat_input_textarea[contenteditable="true"], .tiptap.ProseMirror',
             messageGroup: 'div[data-message-group-id]'
         };
 
@@ -410,7 +421,7 @@
 
         function updateTurnCount() {
             const now = Date.now();
-            const inputEl = document.querySelector(SELECTOR.input);
+            const inputEl = getSafeMainInput(); // 진짜 입력창만 찾기
             if (!inputEl) { counterBadge?.remove(); counterBadge = null; currentInput = null; return; }
             if (!counterBadge || currentInput !== inputEl || !counterBadge.parentElement) initUI(inputEl);
             if (!counterBadge || !textSpan) return;
@@ -486,7 +497,7 @@
     }
 
     // ==========================================
-    // 모듈 5: 고정형 RP 대사 입력 도우미 (커서 위치 수정 버전)
+    // 모듈 5: 고정형 RP 대사 입력 도우미 
     // ==========================================
     function initRPToolbar() {
         const fixedTools = [
@@ -514,7 +525,6 @@
             const inputEl = document.querySelector('textarea, div.__chat_input_textarea[contenteditable="true"], .tiptap.ProseMirror');
             if (!inputEl) return;
 
-            // 새로운 문서 편집기 형태(contenteditable)인 경우
             if (inputEl.tagName !== 'TEXTAREA' && inputEl.isContentEditable) {
                 inputEl.focus();
                 const selection = window.getSelection();
@@ -524,17 +534,14 @@
                 const selectedText = selection.toString();
                 const fullText = prefix + selectedText + suffix;
 
-                // 텍스트 삽입
                 document.execCommand("insertText", false, fullText);
 
-                // 커서를 suffix 이전으로 수동 이동 (뒤에서부터 한 글자씩 왼쪽으로)
                 for (let i = 0; i < suffix.length; i++) {
                     selection.modify("move", "backward", "character");
                 }
                 return;
             }
 
-            // 기존 일반 텍스트 박스일 경우
             const start = inputEl.selectionStart || 0;
             const end = inputEl.selectionEnd || 0;
             const text = inputEl.value || '';
@@ -732,7 +739,7 @@
     }
 
     // ==========================================
-    // 모듈 7: 라디오존데 (외부 우측 배치, 팝업 상향 표시)
+    // 모듈 7: 라디오존데 (외부 우측 배치, 진짜 입력창 판별 적용)
     // ==========================================
     function initRadiosonde() {
         const MODELS = [
@@ -904,7 +911,7 @@
         }
 
         function ensureAttached() {
-            const inputEl = document.querySelector('textarea[placeholder*="메시지"], div.__chat_input_textarea[contenteditable="true"], .tiptap.ProseMirror');
+            const inputEl = getSafeMainInput(); // 진짜 입력창만 찾기
             if (!inputEl) {
                 if (host.parentElement) host.remove();
                 return;
