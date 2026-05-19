@@ -1,8 +1,8 @@
 // ==UserScript==
-// @name         크랙 8 in 1 통합팩 (V7.0 완벽 안정화 / 오토스크롤 포함 및 크래커 소모량 픽스) - UI 패치 반영
+// @name         크랙 8 in 1 통합팩 (V7.0.4 - 커서 위치 수정 완료)
 // @namespace    https://crack.wrtn.ai/
-// @version      7.0.3
-// @description  입력창 외부 좌(크래커)·우(라디오존데) 대칭 배치 및 라디오존데 팝업 상향 표시, UI 개선, 오토스크롤 버튼 추가, 크래커 즉각 계산 적용, 네이티브 '/' 버튼 위치 조정 (최신 Tiptap 입력창 대응)
+// @version      7.0.4
+// @description  입력창 외부 좌(크래커)·우(라디오존데) 대칭 배치 및 라디오존데 팝업 상향 표시, UI 개선, 오토스크롤 버튼 추가, 크래커 즉각 계산 적용, 네이티브 '/' 버튼 위치 조정 (커서 위치 픽스)
 // @author       User & Gemini (수정)
 // @match        https://crack.wrtn.ai/*
 // @grant        GM_addStyle
@@ -283,7 +283,6 @@
     // 모듈 4: 외부 좌측 배치 턴수 & 크래커 표시기
     // ==========================================
     function initTurnCracker() {
-        // UI 변경 대응을 위해 입력창을 찾는 방법(SELECTOR) 확장
         const SELECTOR = {
             input: 'textarea[placeholder*="메시지"], div.__chat_input_textarea[contenteditable="true"], .tiptap.ProseMirror',
             messageGroup: 'div[data-message-group-id]'
@@ -374,7 +373,6 @@
 
         function updateLayout(inputEl) {
             if (!counterBadge) return;
-            // UI 업데이트로 인해 요소 껍데기가 변했을 때를 대비한 유연한 부모 찾기
             const container = inputEl.closest(".flex.w-full.flex-col.rounded-lg") || inputEl.closest(".flex.w-full.flex-col") || inputEl.parentElement;
             if (!container) return;
 
@@ -488,7 +486,7 @@
     }
 
     // ==========================================
-    // 모듈 5: 고정형 RP 대사 입력 도우미 
+    // 모듈 5: 고정형 RP 대사 입력 도우미 (커서 위치 수정 버전)
     // ==========================================
     function initRPToolbar() {
         const fixedTools = [
@@ -513,21 +511,30 @@
         }
 
         function wrapText(prefix, suffix) {
-            // 새 입력창 UI 대응
             const inputEl = document.querySelector('textarea, div.__chat_input_textarea[contenteditable="true"], .tiptap.ProseMirror');
             if (!inputEl) return;
 
-            // 만약 새로운 문서 편집기 형태(contenteditable)인 경우의 동작 추가
+            // 새로운 문서 편집기 형태(contenteditable)인 경우
             if (inputEl.tagName !== 'TEXTAREA' && inputEl.isContentEditable) {
                 inputEl.focus();
-                const sel = window.getSelection();
-                if (!sel.rangeCount) return;
-                const text = sel.toString();
-                document.execCommand("insertText", false, prefix + text + suffix);
+                const selection = window.getSelection();
+                if (!selection.rangeCount) return;
+
+                const range = selection.getRangeAt(0);
+                const selectedText = selection.toString();
+                const fullText = prefix + selectedText + suffix;
+
+                // 텍스트 삽입
+                document.execCommand("insertText", false, fullText);
+
+                // 커서를 suffix 이전으로 수동 이동 (뒤에서부터 한 글자씩 왼쪽으로)
+                for (let i = 0; i < suffix.length; i++) {
+                    selection.modify("move", "backward", "character");
+                }
                 return;
             }
 
-            // 기존 일반 텍스트 박스일 경우의 동작
+            // 기존 일반 텍스트 박스일 경우
             const start = inputEl.selectionStart || 0;
             const end = inputEl.selectionEnd || 0;
             const text = inputEl.value || '';
@@ -575,7 +582,6 @@
 
             if (idx !== -1) {
                 const inputEl = document.querySelector('textarea, div.__chat_input_textarea[contenteditable="true"], .tiptap.ProseMirror');
-                // 문서 편집기 내부에 커서가 있는지 확인하는 조건 보강
                 if (document.activeElement === inputEl || inputEl?.contains(document.activeElement)) {
                     if (fixedTools[idx]) {
                         e.preventDefault();
@@ -681,7 +687,6 @@
         }
 
         function processAutoSave() {
-            // 새 UI 방식 대응 포함
             const inputEl = document.querySelector('textarea.__chat_input_textarea, textarea[placeholder*="메시지"], div.__chat_input_textarea[contenteditable="true"], .tiptap.ProseMirror');
             if (!inputEl) return;
 
@@ -899,14 +904,12 @@
         }
 
         function ensureAttached() {
-            // UI 변경(Tiptap) 대응 적용
             const inputEl = document.querySelector('textarea[placeholder*="메시지"], div.__chat_input_textarea[contenteditable="true"], .tiptap.ProseMirror');
             if (!inputEl) {
                 if (host.parentElement) host.remove();
                 return;
             }
             
-            // 기존 클래스가 없더라도 찾을 수 있도록 범위 확장
             const container = inputEl.closest(".flex.w-full.flex-col.rounded-lg") || inputEl.closest(".flex.w-full.flex-col") || inputEl.parentElement;
             if (!container) return;
 
@@ -1051,7 +1054,7 @@
     }
 
     // ==========================================
-    // 통합팩 동시 실행 관리 (안전장치 강화)
+    // 통합팩 동시 실행 관리
     // ==========================================
     function startAll() {
         try {
