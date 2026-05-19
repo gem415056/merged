@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         크랙 8 in 1 통합팩 (V7.0 완벽 안정화 / 오토스크롤 포함 및 크래커 소모량 픽스)
 // @namespace    https://crack.wrtn.ai/
-// @version      7.0.2
-// @description  입력창 외부 좌(크래커)·우(라디오존데) 대칭 배치 및 라디오존데 팝업 상향 표시, UI 개선, 오토스크롤 버튼 추가, 크래커 즉각 계산 적용, 네이티브 '/' 버튼 위치 조정
+// @version      7.0.3
+// @description  입력창 탐색 기능 강화(PC/모바일 대응), 라디오존데 및 턴계산기 로딩 오류 수정, 모듈 독립성 유지
 // @author       User & Gemini (수정)
 // @match        https://crack.wrtn.ai/*
 // @grant        GM_addStyle
@@ -281,10 +281,12 @@
 
     // ==========================================
     // 모듈 4: 외부 좌측 배치 턴수 & 크래커 표시기 (가벼운 직관적 계산 방식 적용)
+    // PC/모바일 UI 변경 대응을 위해 입력창 탐색 로직 강화
     // ==========================================
     function initTurnCracker() {
         const SELECTOR = {
-            textarea: 'textarea[placeholder*="메시지"]',
+            // 변경점: 입력창을 찾는 조건을 더 넉넉하게 추가했습니다.
+            textarea: 'textarea[placeholder*="메시지"], textarea.__chat_input_textarea, main textarea',
             messageGroup: 'div[data-message-group-id]'
         };
 
@@ -373,8 +375,17 @@
 
         function updateLayout(textarea) {
             if (!counterBadge) return;
-            const container = textarea.closest(".flex.w-full.flex-col.rounded-lg");
-            if (!container) return;
+            
+            // 변경점: 입력창을 감싸는 박스를 더 유연하게 찾도록 수정
+            let container = textarea.closest(".flex.w-full.flex-col.rounded-lg") || textarea.closest("form");
+            if (!container) {
+                let parent = textarea.parentElement;
+                for(let i=0; i<4; i++) { // 최대 4칸 위로 올라가며 감싸는 div 찾기
+                    if(parent && parent.tagName === 'DIV') { container = parent; break; }
+                    if(parent) parent = parent.parentElement;
+                }
+            }
+            if (!container) container = textarea.parentElement; // 최후의 보루
 
             if (counterBadge.parentElement !== container) {
                 container.appendChild(counterBadge);
@@ -714,6 +725,7 @@
 
     // ==========================================
     // 모듈 7: 라디오존데 (외부 우측 배치, 팝업 상향 표시)
+    // PC/모바일 UI 변경 대응을 위해 입력창 탐색 로직 강화
     // ==========================================
     function initRadiosonde() {
         const MODELS = [
@@ -885,14 +897,23 @@
         }
 
         function ensureAttached() {
-            const textarea = document.querySelector('textarea[placeholder*="메시지"]');
+            // 변경점: 입력창 찾는 조건 완화 (어느 기기, 어느 버전에서든 잘 찾도록)
+            const textarea = document.querySelector('textarea[placeholder*="메시지"], textarea.__chat_input_textarea, main textarea');
             if (!textarea) {
                 if (host.parentElement) host.remove();
                 return;
             }
             
-            const container = textarea.closest(".flex.w-full.flex-col.rounded-lg");
-            if (!container) return;
+            // 변경점: 입력창을 감싸는 박스 찾는 로직 보완
+            let container = textarea.closest(".flex.w-full.flex-col.rounded-lg") || textarea.closest("form");
+            if (!container) {
+                let parent = textarea.parentElement;
+                for(let i=0; i<4; i++) {
+                    if(parent && parent.tagName === 'DIV') { container = parent; break; }
+                    if(parent) parent = parent.parentElement;
+                }
+            }
+            if (!container) container = textarea.parentElement;
 
             if (host.parentElement !== container) {
                 container.appendChild(host);
