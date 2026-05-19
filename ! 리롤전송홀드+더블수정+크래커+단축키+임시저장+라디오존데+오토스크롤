@@ -2,7 +2,7 @@
 // @name         크랙 8 in 1 통합팩 (V7.0 완벽 안정화 / 오토스크롤 포함 및 크래커 소모량 픽스)
 // @namespace    https://crack.wrtn.ai/
 // @version      7.0.2
-// @description  입력창 외부 좌(크래커)·우(라디오존데) 대칭 배치 및 라디오존데 팝업 상향 표시, UI 개선, 오토스크롤 버튼 추가, 크래커 즉각 계산 적용, 네이티브 단축어(\) 버튼 보존 및 재배치
+// @description  입력창 외부 좌(크래커)·우(라디오존데) 대칭 배치 및 라디오존데 팝업 상향 표시, UI 개선, 오토스크롤 버튼 추가, 크래커 즉각 계산 적용, 네이티브 '/' 버튼 위치 조정
 // @author       User & Gemini (수정)
 // @match        https://crack.wrtn.ai/*
 // @grant        GM_addStyle
@@ -280,7 +280,7 @@
     }
 
     // ==========================================
-    // 모듈 4: 외부 좌측 배치 턴수 & 크래커 표시기
+    // 모듈 4: 외부 좌측 배치 턴수 & 크래커 표시기 (가벼운 직관적 계산 방식 적용)
     // ==========================================
     function initTurnCracker() {
         const SELECTOR = {
@@ -484,7 +484,7 @@
     }
 
     // ==========================================
-    // 모듈 5: 고정형 RP 대사 입력 도우미 (+단축어 네이티브 보존 및 오토스크롤 배치 개선)
+    // 모듈 5: 고정형 RP 대사 입력 도우미 (+오토스크롤 및 네이티브 '/' 버튼 연동)
     // ==========================================
     function initRPToolbar() {
         const fixedTools = [
@@ -497,7 +497,7 @@
             { icon: '♧', pre: '(OOC：', suf: ')' }
         ];
 
-        // 충돌 방지 및 안전한 재배치를 위해 Flex 속성(order) 사용
+        // 크랙 원래 사이트의 버튼을 숨기는 스타일 설정
         if (!document.getElementById('hide-native-rp-btns')) {
             const style = document.createElement('style');
             style.id = 'hide-native-rp-btns';
@@ -505,14 +505,6 @@
                 .igx-rp-container-hooked > button:not(.igx-keep-btn) {
                     display: none !important;
                 }
-                .igx-rp-container-hooked {
-                    display: flex !important;
-                    align-items: center;
-                }
-                .igx-order-1 { order: 1 !important; }
-                .igx-order-2 { order: 2 !important; }
-                .igx-order-3 { order: 3 !important; }
-                .igx-order-4 { order: 4 !important; }
             `;
             document.head.appendChild(style);
         }
@@ -578,61 +570,79 @@
             }
         }, true);
 
+        // 주기적으로 버튼 컨테이너를 체크하고 UI를 주입/조정하는 타이머
         setInterval(() => {
             const btnContainer = document.querySelector('.flex.items-center.space-x-2');
             if (!btnContainer) return;
 
+            // 크랙 원래 버튼을 가리기 위해 컨테이너에 클래스 표시
             if (!btnContainer.classList.contains('igx-rp-container-hooked')) {
                 btnContainer.classList.add('igx-rp-container-hooked');
             }
 
-            // [네이티브] "추천답변" 버튼 살리기 및 가장 뒤로 배치(order-4)
+            // [원래 버튼 살리기 1] '추천답변' 버튼 예외 처리
             const recommendBtn = Array.from(btnContainer.querySelectorAll('button')).find(btn => btn.textContent.includes('추천답변'));
             if (recommendBtn && !recommendBtn.classList.contains('igx-keep-btn')) {
-                recommendBtn.classList.add('igx-keep-btn', 'igx-order-4');
+                recommendBtn.classList.add('igx-keep-btn');
             }
 
-            // [네이티브] 새로 추가된 단축어 "\" 버튼 살리기 및 오토스크롤 뒤로 배치(order-2)
-            const slashBtn = Array.from(btnContainer.querySelectorAll('button')).find(btn => btn.textContent.includes('\\'));
+            // [원래 버튼 살리기 2] 새로 추가된 '/' 버튼 예외 처리
+            const slashBtn = Array.from(btnContainer.querySelectorAll('button')).find(btn => btn.textContent.trim() === '/');
             if (slashBtn && !slashBtn.classList.contains('igx-keep-btn')) {
-                slashBtn.classList.add('igx-keep-btn', 'igx-order-2');
+                slashBtn.classList.add('igx-keep-btn');
             }
 
-            // [커스텀] 오토스크롤 버튼 래퍼 (가장 앞 배치: order-1)
-            if (!document.getElementById('custom-auto-scroll-wrapper')) {
-                const autoScrollWrapper = document.createElement('div');
-                autoScrollWrapper.id = 'custom-auto-scroll-wrapper';
-                autoScrollWrapper.className = 'igx-order-1 flex items-center gap-1';
+            let toolWrapper = document.getElementById('custom-rp-tools');
 
+            // 아직 커스텀 툴바가 만들어지지 않았다면 최초 생성
+            if (!toolWrapper) {
+                toolWrapper = document.createElement('div');
+                toolWrapper.id = 'custom-rp-tools';
+                toolWrapper.className = 'flex items-center gap-1';
+
+                // 1. 오토스크롤 버튼
                 const autoScrollBtn = document.createElement('button');
                 autoScrollBtn.id = 'turbo-scroll-btn';
                 autoScrollBtn.className = "relative inline-flex items-center justify-center rounded-full text-sm font-medium transition-colors border border-border bg-card text-line-gray-1 hover:bg-secondary p-0 size-7";
                 autoScrollBtn.innerHTML = `<span style="font-size:15px;">△</span>`;
-                autoScrollWrapper.appendChild(autoScrollBtn);
+                toolWrapper.appendChild(autoScrollBtn);
 
-                btnContainer.appendChild(autoScrollWrapper);
-            }
+                // 2. 원래 제공되는 '/' 버튼이 이미 로딩되어 있다면, 오토스크롤 버튼 바로 다음에 붙임
+                if (slashBtn) {
+                    toolWrapper.appendChild(slashBtn);
+                }
 
-            // [커스텀] 점선 및 매크로 버튼들 래퍼 (\ 버튼 뒤쪽 배치: order-3)
-            if (!document.getElementById('custom-rp-tools')) {
-                const toolWrapper = document.createElement('div');
-                toolWrapper.id = 'custom-rp-tools';
-                toolWrapper.className = 'igx-order-3 flex items-center gap-1';
-
+                // 3. 구분선 (점선) 추가
                 const divider = document.createElement('div');
+                divider.className = 'custom-rp-divider'; // 나중에 식별하기 위한 클래스명
                 divider.style.width = '1px';
                 divider.style.height = '14px';
                 divider.style.borderLeft = '1px dashed currentColor';
                 divider.style.opacity = '0.3';
-                divider.style.margin = '0 8px'; 
+                divider.style.margin = '0 8px';
                 toolWrapper.appendChild(divider);
 
+                // 4. 기존 커스텀 툴바 버튼 추가
                 fixedTools.forEach((t) => {
                     const btn = createToolButton(t.icon, () => wrapText(t.pre, t.suf));
                     toolWrapper.appendChild(btn);
                 });
 
-                btnContainer.appendChild(toolWrapper);
+                // 완성된 툴바를 화면에 적용 (추천답변 버튼이 있으면 그 앞에, 없으면 맨 끝에)
+                if (recommendBtn) {
+                    btnContainer.insertBefore(toolWrapper, recommendBtn);
+                } else {
+                    btnContainer.appendChild(toolWrapper);
+                }
+            } else {
+                // 커스텀 툴바가 이미 만들어진 뒤에 '/' 버튼이 뒤늦게 나타난 경우 자리 이동
+                if (slashBtn && slashBtn.parentElement !== toolWrapper) {
+                    const divider = toolWrapper.querySelector('.custom-rp-divider');
+                    if (divider) {
+                        // 구분선 바로 앞에 위치시킴 (즉, 오토스크롤과 구분선 사이)
+                        toolWrapper.insertBefore(slashBtn, divider);
+                    }
+                }
             }
         }, 500);
     }
