@@ -1,8 +1,8 @@
 // ==UserScript==
-// @name         크랙 8 in 1 통합팩 (V7.0.8 - 레이어 및 입력창 처짐 완전 수정)
+// @name         크랙 8 in 1 통합팩 (V7.0.9 - 크래커 본래 색상 복원 완료)
 // @namespace    https://crack.wrtn.ai/
-// @version      7.0.8
-// @description  입력창 외부 좌(크래커)·우(라디오존데) 고정, 수정창 이사 방지, 배경 흐려짐 시 그레이아웃 완벽 동기화, 크래커 턴수 제거, 엔터 입력 시 키보드 밑 처짐 방지 완료
+// @version      7.0.9
+// @description  입력창 외부 좌(크래커)·우(라디오존데) 고정, 수정창 이사 방지, 배경 흐려짐 시 그레이아웃 완벽 동기화 (평소에는 본래 선명한 색상 유지), 크래커 턴수 제거, 엔터 입력 시 키보드 밑 처짐 방지 완료
 // @author       User & Gemini (수정)
 // @match        https://crack.wrtn.ai/*
 // @grant        GM_addStyle
@@ -290,7 +290,7 @@
     }
 
     // ==========================================
-    // 모듈 4: 외부 좌측 배치 크래커 표시기 (턴수 삭제 및 그레이아웃 동기화)
+    // 모듈 4: 외부 좌측 배치 크래커 표시기 (색상 복원 완료)
     // ==========================================
     function initTurnCracker() {
         const SELECTOR = {
@@ -301,7 +301,7 @@
 
         const ICON = {
             cracker: `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" style="margin-right:4px; opacity:1;"><path fill="currentColor" d="${CRACKER_PATH}"></path></svg>`,
-            bittenCracker: `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" style="margin-right:4px; color:inherit;"><defs><mask id="wrtn-crack-bite-mask"><rect width="24" height="24" fill="#ffffff" style="fill:#ffffff !important;" /><circle cx="24" cy="0" r="12" fill="#000000" style="fill:#000000 !important;" /></mask></defs><path fill="currentColor" mask="url(#wrtn-crack-bite-mask)" d="${CRACKER_PATH}"></path></svg>`
+            bittenCracker: `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" style="margin-right:4px; color:#ff9b9b;"><defs><mask id="wrtn-crack-bite-mask"><rect width="24" height="24" fill="#ffffff" style="fill:#ffffff !important;" /><circle cx="24" cy="0" r="12" fill="#000000" style="fill:#000000 !important;" /></mask></defs><path fill="currentColor" mask="url(#wrtn-crack-bite-mask)" d="${CRACKER_PATH}"></path></svg>`
         };
 
         let counterBadge, textSpan, currentInput;
@@ -964,6 +964,7 @@
         function injectStyle() {
             if (document.getElementById(STYLE_ID)) return;
             const style = document.createElement('style');
+            style.id = style.id;
             style.id = STYLE_ID;
             style.textContent = `
                 #${BTN_ID}.tm-active { box-shadow: inset 0 0 0 2px hsl(var(--foreground, 0 0% 96%) / 0.65), 0 0 0 1px hsl(var(--foreground, 0 0% 96%) / 0.18); background: hsl(var(--accent, 0 0% 18%)) !important; }
@@ -1065,7 +1066,6 @@
     // 통합팩 동시 실행 관리 및 레이아웃 밀림 해결사
     // ==========================================
     function startAll() {
-        // [레이아웃 밀림 방지 추가] 입력창 부모(overflow-y-scroll)의 스크롤을 막아 대사도우미 밀림 원천 해결
         setInterval(() => {
             const inputEl = getSafeMainInput();
             if (inputEl) {
