@@ -1,8 +1,8 @@
 // ==UserScript==
-// @name         크랙 8 in 1 통합팩 (V7.0.9 - 색상 복구 및 레이어 수정 완료)
+// @name         크랙 8 in 1 통합팩 (V7.1.0 - 붙여넣기 커서 오작동 완전 해결)
 // @namespace    https://crack.wrtn.ai/
-// @version      7.0.9
-// @description  입력창 외부 좌(크래커)·우(라디오존데) 고정 및 색상 완벽 복구, 턴수 제거, 키보드 처짐 방지 완료
+// @version      7.1.0
+// @description  입력창 외부 좌(크래커)·우(라디오존데) 고정, 가상 커서 강제 동기화 기술 적용(단축키 사용 후 붙여넣기 꼬임 버그 해결), 크래커 턴수 제거, 입력창 처짐 방지 완료
 // @author       User & Gemini (수정)
 // @match        https://crack.wrtn.ai/*
 // @grant        GM_addStyle
@@ -290,7 +290,7 @@
     }
 
     // ==========================================
-    // 모듈 4: 외부 좌측 배치 크래커 표시기 (색상 복원 완료)
+    // 모듈 4: 외부 좌측 배치 크래커 표시기 
     // ==========================================
     function initTurnCracker() {
         const SELECTOR = {
@@ -322,12 +322,19 @@
             if (document.getElementById('info-display-base-style')) return;
             const style = document.createElement('style');
             style.id = 'info-display-base-style';
-            // z-index를 1로 설정하여 평소엔 원본 색상으로 보이고, 회색 레이어 및 서랍장 아래론 완벽하게 숨도록 조정
             style.textContent = `
-            #my-custom-info-display { position: absolute; box-sizing: border-box; font-family: 'Pretendard', sans-serif; font-size: 11px; font-weight: 500; pointer-events: none; z-index: 1; display: flex; align-items: center; border-radius: 12px; }
+            #my-custom-info-display { position: absolute; box-sizing: border-box; font-family: 'Pretendard', sans-serif; font-size: 11px; font-weight: 500; pointer-events: none; z-index: 2; display: flex; align-items: center; border-radius: 12px; }
             #my-custom-info-display #my-counter-text { display: flex; align-items: center; gap: 0; }
             .my-counter-part { all: unset; display: inline-flex; align-items: center; border-radius: 4px; padding: 1px 4px; user-select: none; }
             .my-counter-separator { opacity: 0.3; margin: 0 2px; user-select: none; }
+            
+            /* 진짜 입력창 영역이 비활성화(그레이아웃)될 때 크래커 표시기도 선명도를 낮추고 흑백(그레이) 처리 */
+            .has-\\[textarea\\:disabled\\]\\:bg-primary-foreground #my-custom-info-display,
+            .has-\\[textarea\\:disabled\\]\\:cursor-not-allowed #my-custom-info-display {
+                opacity: 0.45 !important;
+                filter: grayscale(100%) !important;
+                transition: all 0.2s ease-in-out;
+            }
             `;
             document.head.appendChild(style);
         }
@@ -475,12 +482,10 @@
                     lastKnownTotalCrackers = crackerCount;
                 }
 
-                // 선명한 주황색 복구
                 html += `<div class="my-counter-part" style="color: #FFA600;">${ICON.cracker}<span style="font-weight:700;">${crackerCount.toLocaleString()}</span>개</div>`;
             }
 
             html += `<span class="my-counter-separator">|</span>`;
-            // 선명한 빨간색 복구
             html += `<div class="my-counter-part" style="color:#ff9b9b;">${ICON.bittenCracker}<span style="font-weight:700;">${lastConsumedAmount}</span>개</div>`;
 
             if (html !== lastRenderedText) {
@@ -493,7 +498,7 @@
     }
 
     // ==========================================
-    // 모듈 5: 고정형 RP 대사 입력 도우미 
+    // 모듈 5: 고정형 RP 대사 입력 도우미 (가상 커서 동기화 보강)
     // ==========================================
     function initRPToolbar() {
         const fixedTools = [
@@ -521,6 +526,7 @@
             const inputEl = document.querySelector('textarea, div.__chat_input_textarea[contenteditable="true"], .tiptap.ProseMirror');
             if (!inputEl) return;
 
+            // 새로운 문서 편집기 형태(contenteditable)인 경우
             if (inputEl.tagName !== 'TEXTAREA' && inputEl.isContentEditable) {
                 inputEl.focus();
                 const selection = window.getSelection();
@@ -530,14 +536,22 @@
                 const selectedText = selection.toString();
                 const fullText = prefix + selectedText + suffix;
 
+                // 1. 텍스트 삽입
                 document.execCommand("insertText", false, fullText);
 
+                // 2. 화면상의 커서를 후방으로 수동 이동
                 for (let i = 0; i < suffix.length; i++) {
                     selection.modify("move", "backward", "character");
                 }
+
+                // 3. [핵심] 가상 커서와 편집기 상태 강제 동기화 (붙여넣기 꼬임 방지)
+                inputEl.dispatchEvent(new Event('selectionchange', { bubbles: true }));
+                inputEl.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true }));
+                inputEl.dispatchEvent(new KeyboardEvent('keyup', { key: 'ArrowLeft', bubbles: true }));
                 return;
             }
 
+            // 기존 일반 텍스트 박스일 경우
             const start = inputEl.selectionStart || 0;
             const end = inputEl.selectionEnd || 0;
             const text = inputEl.value || '';
@@ -753,7 +767,7 @@
         GM_addStyle(`
             #igx-rs-inline-host {
                 position: absolute; display: flex; align-items: center; gap: 4px;
-                z-index: 1; pointer-events: none; font-family: system-ui, -apple-system, Segoe UI, Roboto, "Noto Sans KR", Arial;
+                z-index: 2; pointer-events: none; font-family: system-ui, -apple-system, Segoe UI, Roboto, "Noto Sans KR", Arial;
                 font-size: 11px; font-weight: 500;
             }
             #igx-rs-inline-host * { pointer-events: auto; }
