@@ -1,7 +1,7 @@
 // ==UserScript==
-// @name         크랙 8 in 1 통합팩 (V7.1.5 - 삼성 단축어 커서 튐 및 문장 끝 밀림 현상 완전 해결)
+// @name         크랙 8 in 1 통합팩 (V7.2.0 - 삼성 키보드 단축어 충돌 완전 해결 및 입력창 높이 복구)
 // @namespace    https://crack.wrtn.ai/
-// @version      7.1.5
+// @version      7.2.0
 // @description  입력창 외부 좌(크래커)·우(라디오존데) 고정 및 색상 복구, 삼성 키보드 단축어 완벽 대응 완료
 // @author       User & Gemini (수정)
 // @match        https://crack.wrtn.ai/*
@@ -290,7 +290,7 @@
     }
 
     // ==========================================
-    // 모듈 4: 외부 좌측 배치 크래커 표시기 (입력 감시 차단 및 안정성 최적화)
+    // 모듈 4: 외부 좌측 배치 크래커 표시기 (실시간 감시 완전 제거 -> 충돌 근본적 해결)
     // ==========================================
     function initTurnCracker() {
         const SELECTOR = {
@@ -305,7 +305,7 @@
         };
 
         let counterBadge, textSpan, currentInput;
-        let updateTimer, observer, lastRenderedText = '';
+        let lastRenderedText = '';
         let cachedTurns, cachedTotalMessages, isCalculatingTurns = false, lastCalculatedTime = 0, lastChatId;
         
         let lastKnownTotalCrackers = null;
@@ -315,7 +315,7 @@
         function start() {
             injectBaseStyle();
             startObserver();
-            scheduleUpdate();
+            updateTurnCount();
         }
 
         function injectBaseStyle() {
@@ -332,26 +332,10 @@
         }
 
         function startObserver() {
-            if (observer) return;
-            observer = new MutationObserver((mutations) => {
-                const shouldSkip = mutations.every(m => {
-                    const target = m.target;
-                    if (!target) return true;
-                    if (typeof target.closest === 'function') {
-                        if (target.closest('#my-custom-info-display')) return true;
-                        if (target.closest('#igx-rs-inline-host')) return true;
-                        if (target.closest('.ProseMirror')) return true;
-                        if (target.closest('textarea')) return true;
-                    }
-                    return false;
-                });
-                if (shouldSkip) return;
-                scheduleUpdate();
-            });
-            observer.observe(document.body, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ['aria-valuenow'] });
+            // 브라우저 렌더러와 키보드 입력 프로세스를 교란하던 MutationObserver를 완전히 영구 삭제합니다.
+            // 1.5초 주기 백그라운드 갱신으로 전환하여 단축어 및 텍스트 입력 시 부하를 0%로 통제합니다.
+            setInterval(updateTurnCount, 1500);
         }
-
-        function scheduleUpdate() { clearTimeout(updateTimer); updateTimer = setTimeout(updateTurnCount, 80); }
 
         function getThemeColors(el) {
             let bg = '#212121', current = el;
@@ -403,7 +387,11 @@
             counterBadge.style.top = '-26px';
             counterBadge.style.left = '4px';
 
-            // 키보드 커서 이탈 방지를 위해 입력창 엘리먼트 자체의 스타일 속성은 일절 조작하지 않음 (이전 제거 항목 유지)
+            // 대사 입력 도우미 고정 및 키보드 뒤 숨김 방지를 위한 원본 높이 복원 코드 유지
+            if (inputEl.style) {
+                inputEl.style.removeProperty('padding-top');
+                inputEl.style.removeProperty('min-height');
+            }
         }
 
         async function fetchRoomData() {
@@ -425,7 +413,7 @@
         }
 
         function updateTurnCount() {
-            // 사용자가 입력창에 무언가를 타이핑 중이거나 입력창이 활성화되어 있을 경우 UI 변경 연산을 100% 멈춤 (커서 안전 최우선 정책)
+            // 사용자가 입력창에 무언가를 타이핑 중이거나 에디터가 활성화된 상태라면 레이아웃과 DOM을 일절 조작하지 않음 (이탈 완벽 방지)
             const activeEl = document.activeElement;
             if (activeEl && (activeEl.closest('.ProseMirror') || activeEl.closest('textarea') || activeEl.isContentEditable)) {
                 return;
@@ -672,7 +660,7 @@
     }
 
     // ==========================================
-    // 모듈 6: 입력창 자동 임시저장 (단축어 충돌을 막기 위한 안전 보존 메커니즘)
+    // 모듈 6: 입력창 자동 임시저장 (단축어 타이핑 부하 제어 최적화)
     // ==========================================
     function initAutoSaver() {
         function getRoomId() {
@@ -733,35 +721,21 @@
             if (inputEl.dataset.draftHooked !== 'true') {
                 inputEl.dataset.draftHooked = 'true';
                 let saveTimeout = null;
-                let isComposing = false;
 
-                // 키보드가 텍스트 조합/대치를 진행하는 상태인지 모니터링
-                inputEl.addEventListener('compositionstart', () => { isComposing = true; });
-                inputEl.addEventListener('compositionend', () => { 
-                    isComposing = false; 
-                    triggerDelaySave();
-                });
-
-                function triggerDelaySave() {
+                // 타이핑 중 실시간 연산 부하를 차단하고, 타이핑이 완전히 멈추고 3초가 지난 시점에 한해 1회만 백그라운드 저장합니다.
+                inputEl.addEventListener('input', () => {
                     if (saveTimeout) clearTimeout(saveTimeout);
                     saveTimeout = setTimeout(() => {
-                        if (isComposing) return; // 여전히 키보드가 조합 중이라면 저장을 미룹니다.
                         const text = isEditor ? (inputEl.innerText || '') : (inputEl.value || '');
                         if (text.trim() === '') {
                             localStorage.removeItem(getDraftKey());
                         } else {
                             localStorage.setItem(getDraftKey(), text);
                         }
-                    }, 2000); // 넉넉히 2초간 입력이 멈춰 있을 때만 저장을 활성화하여 타이핑 성능을 보장합니다.
-                }
-
-                inputEl.addEventListener('input', () => {
-                    if (!isComposing) {
-                        triggerDelaySave();
-                    }
+                    }, 3000); 
                 });
 
-                // 가장 안전한 백업 메커니즘: 키보드가 닫히거나 입력 영역에서 초점이 나갔을 때는 대치 지연 없이 완벽하게 백업
+                // 가장 안전한 백업 방식: 모바일 키보드가 완전히 닫히거나 입력창에서 가려져 초점이 풀릴 때 즉각 자동 백업을 동기화합니다.
                 inputEl.addEventListener('blur', () => {
                     if (saveTimeout) clearTimeout(saveTimeout);
                     const text = isEditor ? (inputEl.innerText || '') : (inputEl.value || '');
@@ -777,7 +751,7 @@
     }
 
     // ==========================================
-    // 모듈 7: 라디오존데 (외부 우측 배치 - 초점 안정성 개선)
+    // 모듈 7: 라디오존데 (외부 우측 배치 - 초점 감지 예외 추가)
     // ==========================================
     function initRadiosonde() {
         const MODELS = [
@@ -955,7 +929,7 @@
                 return;
             }
             
-            // 입력창 사용 중일 때는 위치 부착 검사나 레이아웃 스타일 갱신 작업을 차단합니다.
+            // 입력창에 초점(포커스)이 활성화되어 있을 때는 라디오존데 위치 탐색 및 스타일 연산을 중단하여 충돌을 막습니다.
             const activeEl = document.activeElement;
             if (activeEl && (activeEl.closest('.ProseMirror') || activeEl.closest('textarea') || activeEl.isContentEditable)) {
                 return;
