@@ -1,8 +1,8 @@
 // ==UserScript==
-// @name         크랙 8 in 1 통합팩 (V7.1.5 - 참조 오류 완전 해결 및 최적화)
+// @name         크랙 8 in 1 통합팩 (V7.1.6 - 삼성 단축어 밀림 완전 해결)
 // @namespace    https://crack.wrtn.ai/
-// @version      7.1.5
-// @description  입력창 외부 좌(크래커)·우(라디오존데) body 격리 배치, 가상 커서 강제 동기화(단축키 사용 후 붙여넣기 해결), 크래커 턴수 제거, 입력창 처짐 방지 및 오토스크롤 작동 복구 완료
+// @version      7.1.6
+// @description  입력창 외부 좌(크래커)·우(라디오존데) body 격리 배치, textContent 교체 및 감지 이벤트 바인딩 개선으로 삼성 키보드 단축어 버그 완전 해결, 크래커 턴수 제거, 입력창 처짐 및 오토스크롤 복구 완료
 // @author       User & Gemini (수정)
 // @match        https://crack.wrtn.ai/*
 // @grant        GM_addStyle
@@ -295,7 +295,7 @@
     }
 
     // ==========================================
-    // 모듈 4: 외부 좌측 배치 크래커 표시기 (한글/단축어 입력 보호 적용)
+    // 모듈 4: 외부 좌측 배치 크래커 표시기 (한글/단축어 입력 보호 및 구조 개선)
     // ==========================================
     function initTurnCracker() {
         const CRACKER_PATH = "M21.17 12.01c.52-.59.83-1.36.83-2.21s-.31-1.62-.83-2.21l.17-.21q0-.01.02-.02l.14-.21q0-.02.03-.05.06-.1.1-.2l.05-.08.09-.2q.01-.05.04-.11l.06-.18q0-.08.04-.14.01-.07.04-.16l.03-.19q0-.06.02-.13v-.33a3.37 3.37 0 0 0-3.36-3.37l-.33.01q-.06 0-.12.02-.1 0-.2.03-.07 0-.15.04l-.14.04-.18.06-.11.04-.2.09-.07.04-.2.11q-.03 0-.05.03l-.21.14-.02.02-.21.17a3.4 3.4 0 0 0-4.42 0 3.3 3.3 0 0 0-2.21-.83c-.85 0-1.62.31-2.21.83l-.21-.17-.02-.02-.21-.14q-.02 0-.05-.03l-.2-.11-.08-.04-.2-.09-.11-.04-.18-.06-.14-.04-.16-.04-.2-.03-.12-.02-.33-.01a3.37 3.37 0 0 0-3.34 3.82q0 .1.03.19 0 .07.04.16 0 .08.04.14l.06.18q0 .05.04.11.03.1.09.19l.04.08.1.2q.01.02.04.05l.16.23q.07.1.17.21a3.3 3.3 0 0 0-.83 2.21c0 .85.3 1.62.83 2.21a3.3 3.3 0 0 0-.83 2.21c0 .85.3 1.62.83 2.21l-.17.21-.02.02-.14.21q0 .02-.03.05l-.11.2-.04.08-.1.2-.03.11-.06.18-.04.14-.04.16-.03.19-.02.13-.01.33A3.4 3.4 0 0 0 3.02 21c.6.61 1.45.99 2.38.99l.33-.01q.06 0 .12-.02.1 0 .19-.03.07 0 .16-.04l.14-.04.18-.06.1-.04.2-.09.08-.04.2-.11q.03 0 .05-.03l.2-.14.03-.02.2-.17a3.4 3.4 0 0 0 4.43 0 3.32 3.32 0 0 0 4.42 0 3 3 0 0 0 .44.33q.03 0 .05.03l.2.11.08.04.2.09.1.04.19.06.14.04.16.04.19.03.13.02.33.01c.92 0 1.75-.37 2.36-.97l.02-.02c.6-.61.99-1.45.99-2.38l-.01-.33q0-.06-.02-.12 0-.1-.03-.19 0-.07-.04-.16l-.04-.14-.06-.18-.04-.11-.1-.19-.03-.08-.11-.2q0-.02-.03-.05l-.14-.21-.02-.02-.17-.21c.52-.59.83-1.36.83-2.21s-.31-1.62-.83-2.21M7.5 13.5 6 12l1.5-1.5L9 12zM12 6l1.5 1.5L12 9l-1.5-1.5zm0 12-1.5-1.5L12 15l1.5 1.5zm4.5-4.5L15 12l1.5-1.5L18 12z";
@@ -312,7 +312,6 @@
         let lastKnownTotalCrackers = null;
         let lastConsumedAmount = 0;
         let lastProcessedTurns = -1;
-        let isComposing = false; // 글자 조합 중 레이아웃 연산 일시정지를 위한 플래그
 
         function start() {
             injectBaseStyle();
@@ -369,16 +368,25 @@
             const colors = getThemeColors(inputEl);
             counterBadge.style.color = colors.text;
 
-            // 삼성 키보드 조합 중 연산 정지를 위한 리스너 부착
-            inputEl.addEventListener('compositionstart', () => { isComposing = true; });
-            inputEl.addEventListener('compositionend', () => { isComposing = false; updateLayout(inputEl); });
+            // 삼성 키보드 단축어 상태 관리를 방마다 유연하게 바인딩하는 감시기 설정
+            if (!inputEl.dataset.tcEventsHooked) {
+                inputEl.dataset.tcEventsHooked = 'true';
+                inputEl.dataset.isComposing = 'false';
+                inputEl.addEventListener('compositionstart', () => { inputEl.dataset.isComposing = 'true'; });
+                inputEl.addEventListener('compositionend', () => { 
+                    inputEl.dataset.isComposing = 'false'; 
+                    setTimeout(() => updateLayout(inputEl), 50); 
+                });
+            }
 
             document.body.appendChild(counterBadge);
             updateLayout(inputEl);
         }
 
         function updateLayout(inputEl) {
-            if (!counterBadge || isComposing) return; // 글자 조합 중일 때는 연산을 완벽 정지하여 키보드 꼬임 원천 차단
+            if (!counterBadge) return;
+            if (inputEl.dataset.isComposing === 'true') return; // 글자 조합 중일 때는 연산을 완전 스킵
+            
             const container = inputEl.closest(".flex.w-full.flex-col.rounded-lg") || inputEl.closest(".flex.w-full.flex-col") || inputEl.parentElement;
             if (!container) return;
 
@@ -412,10 +420,12 @@
         }
 
         function updateTurnCount() {
-            if (isComposing) { scheduleUpdate(); return; }
-            const now = Date.now();
             const inputEl = getSafeMainInput();
             if (!inputEl) { counterBadge?.remove(); counterBadge = null; currentInput = null; scheduleUpdate(); return; }
+            
+            if (inputEl.dataset.isComposing === 'true') { scheduleUpdate(); return; }
+            
+            const now = Date.now();
             if (!counterBadge || currentInput !== inputEl || !counterBadge.parentElement) initUI(inputEl);
             if (!counterBadge || !textSpan) { scheduleUpdate(); return; }
             const currentChatId = typeof CrackUtil !== 'undefined' ? CrackUtil.path().chatRoom() : null;
@@ -457,7 +467,7 @@
         }
 
         function renderUpdate(inputEl) {
-            if (!textSpan || isComposing) return;
+            if (!textSpan || inputEl.dataset.isComposing === 'true') return;
             let html = '';
 
             const crackerCount = getCrackerCount();
@@ -487,11 +497,11 @@
         
         window.addEventListener('scroll', () => {
             const inputEl = getSafeMainInput();
-            if (inputEl && !isComposing) updateLayout(inputEl);
+            if (inputEl && inputEl.dataset.isComposing !== 'true') updateLayout(inputEl);
         }, { passive: true });
         window.addEventListener('resize', () => {
             const inputEl = getSafeMainInput();
-            if (inputEl && !isComposing) updateLayout(inputEl);
+            if (inputEl && inputEl.dataset.isComposing !== 'true') updateLayout(inputEl);
         }, { passive: true });
     }
 
@@ -668,7 +678,7 @@
     }
 
     // ==========================================
-    // 모듈 6: 입력창 자동 임시저장
+    // 모듈 6: 입력창 자동 임시저장 (한글/단축어 입력 꼬임 해결 완료)
     // ==========================================
     function initAutoSaver() {
         function getRoomId() {
@@ -713,7 +723,8 @@
 
             if (!isRestoredForCurrentRoom) {
                 const savedDraft = localStorage.getItem(DRAFT_KEY);
-                const currentText = isEditor ? (inputEl.innerText || '') : (inputEl.value || '');
+                // innerText 대신 textContent를 사용하여 강제 화면 정렬을 유발하는 안드로이드 Webkit 버그 예방
+                const currentText = isEditor ? (inputEl.textContent || '') : (inputEl.value || '');
                 
                 if (savedDraft && currentText.trim() === '') {
                     if (isEditor) {
@@ -729,7 +740,8 @@
             if (inputEl.dataset.draftHooked !== 'true') {
                 inputEl.dataset.draftHooked = 'true';
                 inputEl.addEventListener('input', (e) => {
-                    const text = isEditor ? e.target.innerText : e.target.value;
+                    // innerText 대신 textContent를 사용하여 삼성 키보드 단축어 세션이 강제 폭파되는 현상 해결
+                    const text = isEditor ? e.target.textContent : e.target.value;
                     if (text.trim() === '') {
                         localStorage.removeItem(getDraftKey());
                     } else {
@@ -920,20 +932,25 @@
                 return;
             }
             
-            const isInputActive = (document.activeElement === inputEl || inputEl.contains(document.activeElement));
-            if (isInputActive && inputEl.dataset.isComposing === 'true') return;
+            // 입력창이 새로 발견되면 한글 및 단축어 조합 상태 리스너를 방마다 확실하게 새로 걸어둠
+            if (!inputEl.dataset.rsEventsHooked) {
+                inputEl.dataset.rsEventsHooked = 'true';
+                inputEl.dataset.isComposing = 'false';
+                inputEl.addEventListener('compositionstart', () => { inputEl.dataset.isComposing = 'true'; });
+                inputEl.addEventListener('compositionend', () => { 
+                    inputEl.dataset.isComposing = 'false'; 
+                    setTimeout(ensureAttached, 50); 
+                });
+            }
+
+            // 키보드 글자 조합 입력 중에는 레이아웃 재계산을 스킵하여 오동작 방지
+            if (inputEl.dataset.isComposing === 'true') return;
 
             const container = inputEl.closest(".flex.w-full.flex-col.rounded-lg") || inputEl.closest(".flex.w-full.flex-col") || inputEl.parentElement;
             if (!container) return;
 
             if (host.parentElement !== document.body) {
                 document.body.appendChild(host);
-                
-                if (!inputEl.dataset.rsEventsHooked) {
-                    inputEl.dataset.rsEventsHooked = 'true';
-                    inputEl.addEventListener('compositionstart', () => { inputEl.dataset.isComposing = 'true'; });
-                    inputEl.addEventListener('compositionend', () => { inputEl.dataset.isComposing = 'false'; ensureAttached(); });
-                }
             }
 
             const rect = container.getBoundingClientRect();
@@ -1079,6 +1096,7 @@
     // 통합팩 동시 실행 관리 및 레이아웃 밀림 해결사
     // ==========================================
     function startAll() {
+        // 진짜 채팅방 스크롤은 방해하지 않고, 입력창 가상 레이아웃 영역만 스크롤 고정 잠금
         setInterval(() => {
             const inputEl = getSafeMainInput();
             if (inputEl) {
