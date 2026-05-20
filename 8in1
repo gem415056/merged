@@ -1,8 +1,8 @@
 // ==UserScript==
-// @name         크랙 8 in 1 통합팩 (V7.1.0 - 삼성 키보드 단축어 충돌 해결 버전)
+// @name         크랙 8 in 1 통합팩 (V7.1.5 - 삼성 단축어 커서 튐 및 문장 끝 밀림 현상 완전 해결)
 // @namespace    https://crack.wrtn.ai/
-// @version      7.1.0
-// @description  입력창 외부 좌(크래커)·우(라디오존데) 고정 및 색상 완벽 복구, 삼성 키보드 단축어 커서 튐 현상 수정 완료
+// @version      7.1.5
+// @description  입력창 외부 좌(크래커)·우(라디오존데) 고정 및 색상 복구, 삼성 키보드 단축어 완벽 대응 완료
 // @author       User & Gemini (수정)
 // @match        https://crack.wrtn.ai/*
 // @grant        GM_addStyle
@@ -290,7 +290,7 @@
     }
 
     // ==========================================
-    // 모듈 4: 외부 좌측 배치 크래커 표시기 (입력 감시 차단 및 색상 복원 완료)
+    // 모듈 4: 외부 좌측 배치 크래커 표시기 (입력 감시 차단 및 안정성 최적화)
     // ==========================================
     function initTurnCracker() {
         const SELECTOR = {
@@ -334,7 +334,6 @@
         function startObserver() {
             if (observer) return;
             observer = new MutationObserver((mutations) => {
-                // 키보드 입력 및 대치 과정에서 일어나는 입력창 내부 변화는 감지 대상에서 전면 제외 (안드로이드 단축키 오작동 원천 차단)
                 const shouldSkip = mutations.every(m => {
                     const target = m.target;
                     if (!target) return true;
@@ -404,10 +403,7 @@
             counterBadge.style.top = '-26px';
             counterBadge.style.left = '4px';
 
-            if (inputEl.style) {
-                inputEl.style.removeProperty('padding-top');
-                inputEl.style.removeProperty('min-height');
-            }
+            // 키보드 커서 이탈 방지를 위해 입력창 엘리먼트 자체의 스타일 속성은 일절 조작하지 않음 (이전 제거 항목 유지)
         }
 
         async function fetchRoomData() {
@@ -429,6 +425,12 @@
         }
 
         function updateTurnCount() {
+            // 사용자가 입력창에 무언가를 타이핑 중이거나 입력창이 활성화되어 있을 경우 UI 변경 연산을 100% 멈춤 (커서 안전 최우선 정책)
+            const activeEl = document.activeElement;
+            if (activeEl && (activeEl.closest('.ProseMirror') || activeEl.closest('textarea') || activeEl.isContentEditable)) {
+                return;
+            }
+
             const now = Date.now();
             const inputEl = getSafeMainInput();
             if (!inputEl) { counterBadge?.remove(); counterBadge = null; currentInput = null; return; }
@@ -670,7 +672,7 @@
     }
 
     // ==========================================
-    // 모듈 6: 입력창 자동 임시저장 (500ms 지연 저장 도입으로 키보드 처짐 해결)
+    // 모듈 6: 입력창 자동 임시저장 (단축어 충돌을 막기 위한 안전 보존 메커니즘)
     // ==========================================
     function initAutoSaver() {
         function getRoomId() {
@@ -731,18 +733,43 @@
             if (inputEl.dataset.draftHooked !== 'true') {
                 inputEl.dataset.draftHooked = 'true';
                 let saveTimeout = null;
-                
-                inputEl.addEventListener('input', () => {
+                let isComposing = false;
+
+                // 키보드가 텍스트 조합/대치를 진행하는 상태인지 모니터링
+                inputEl.addEventListener('compositionstart', () => { isComposing = true; });
+                inputEl.addEventListener('compositionend', () => { 
+                    isComposing = false; 
+                    triggerDelaySave();
+                });
+
+                function triggerDelaySave() {
                     if (saveTimeout) clearTimeout(saveTimeout);
-                    // 입력 중 즉시 실행 대신 500ms 딜레이를 주어 삼성 키보드의 연속 대치 처리를 부드럽게 유지
                     saveTimeout = setTimeout(() => {
+                        if (isComposing) return; // 여전히 키보드가 조합 중이라면 저장을 미룹니다.
                         const text = isEditor ? (inputEl.innerText || '') : (inputEl.value || '');
                         if (text.trim() === '') {
                             localStorage.removeItem(getDraftKey());
                         } else {
                             localStorage.setItem(getDraftKey(), text);
                         }
-                    }, 500);
+                    }, 2000); // 넉넉히 2초간 입력이 멈춰 있을 때만 저장을 활성화하여 타이핑 성능을 보장합니다.
+                }
+
+                inputEl.addEventListener('input', () => {
+                    if (!isComposing) {
+                        triggerDelaySave();
+                    }
+                });
+
+                // 가장 안전한 백업 메커니즘: 키보드가 닫히거나 입력 영역에서 초점이 나갔을 때는 대치 지연 없이 완벽하게 백업
+                inputEl.addEventListener('blur', () => {
+                    if (saveTimeout) clearTimeout(saveTimeout);
+                    const text = isEditor ? (inputEl.innerText || '') : (inputEl.value || '');
+                    if (text.trim() === '') {
+                        localStorage.removeItem(getDraftKey());
+                    } else {
+                        localStorage.setItem(getDraftKey(), text);
+                    }
                 });
             }
         }
@@ -750,7 +777,7 @@
     }
 
     // ==========================================
-    // 모듈 7: 라디오존데 (외부 우측 배치)
+    // 모듈 7: 라디오존데 (외부 우측 배치 - 초점 안정성 개선)
     // ==========================================
     function initRadiosonde() {
         const MODELS = [
@@ -925,6 +952,12 @@
             const inputEl = getSafeMainInput();
             if (!inputEl) {
                 if (host.parentElement) host.remove();
+                return;
+            }
+            
+            // 입력창 사용 중일 때는 위치 부착 검사나 레이아웃 스타일 갱신 작업을 차단합니다.
+            const activeEl = document.activeElement;
+            if (activeEl && (activeEl.closest('.ProseMirror') || activeEl.closest('textarea') || activeEl.isContentEditable)) {
                 return;
             }
             
