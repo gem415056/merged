@@ -1,8 +1,8 @@
 // ==UserScript==
-// @name         크랙 9 in 1 통합팩 (V8.0.0 - 색상 복구 및 레이어 수정 완료)
+// @name         크랙 8 in 1 통합팩 (V8.1.0 - 팝업 입력기 통합 및 터치 연동 완료)
 // @namespace    https://crack.wrtn.ai/
-// @version      8.0.0
-// @description  입력창 외부 좌(크래커)·우(라디오존데) 고정 및 색상 완벽 복구, 단축어 전용 입력 도우미(☆) 및 5초 주기 감지 경량화 완료
+// @version      9.0.0
+// @description  입력창 외부 좌(크래커)·우(라디오존데) 고정, 스마트 팝업 입력기 전환 및 단축어 최적화 완료
 // @author       User & Gemini (수정)
 // @match        https://crack.wrtn.ai/*
 // @grant        GM_addStyle
@@ -16,6 +16,9 @@
 (function () {
     'use strict';
 
+    // 글로벌 네이티브 입력 허용 플래그
+    window.allowNativeFocus = false;
+
     // [도움함수] 여러 입력창 중 '진짜 메인 입력창'만 골라내는 기능
     function getSafeMainInput() {
         const inputs = document.querySelectorAll('textarea[placeholder*="메시지"], div.__chat_input_textarea, .tiptap.ProseMirror');
@@ -27,7 +30,7 @@
     }
 
     // ==========================================
-    // 모듈 1: 더블클릭 수정 기능
+    // 모듈 1: 더블클릭 수정 기능 (순수 원본)
     // ==========================================
     function initDoubleClick() {
         function findMessageContainer(target) {
@@ -91,7 +94,7 @@
     }
 
     // ==========================================
-    // 모듈 2: 리롤 길게 누르기 기능
+    // 모듈 2: 리롤 길게 누르기 기능 (순수 원본)
     // ==========================================
     function initRerollHold() {
         const HOLD_MS = 600;
@@ -185,7 +188,7 @@
     }
 
     // ==========================================
-    // 모듈 3: 전송/이어서 생성 길게 누르기 기능
+    // 모듈 3: 전송/이어서 생성 길게 누르기 기능 (순수 원본)
     // ==========================================
     function initSendHold() {
         const HOLD_MS = 600;
@@ -290,14 +293,14 @@
     }
 
     // ==========================================
-    // 모듈 4: 외부 좌측 배치 크래커 표시기 (5초 주기 감지 및 경량화 적용)
+    // 모듈 4: 외부 좌측 배치 크래커 표시기 (순수 원본)
     // ==========================================
     function initTurnCracker() {
         const SELECTOR = {
             messageGroup: 'div[data-message-group-id]'
         };
 
-        const CRACKER_PATH = "M21.17 12.01c.52-.59.83-1.36.83-2.21s-.31-1.62-.83-2.21l.17-.21q0-.01.02-.02l.14-.21q0-.02.03-.05.06-.1.1-.2l.05-.08.09-.2q.01-.05.04-.11l.06-.18q0-.08.04-.14.01-.07.04-.16l.03-.19q0-.06.02-.13v-.33a3.37 3.37 0 0 0-3.36-3.37l-.33.01q-.06 0-.12.02-.1 0-.2.03-.07 0-.15.04l-.14.04-.18.06-.11.04-.2.09-.07.04-.2.11q-.03 0-.05.03l-.21.14-.02.02-.21.17a3.4 3.4 0 0 0-4.42 0 3.3 3.3 0 0 0-2.21-.83c-.85 0-1.62.31-2.21.83l-.21-.17-.02-.02-.21-.14q-.02 0-.05-.03l-.2-.11-.08-.04-.2-.09-.11-.04-.18-.06-.14-.04-.16-.04-.2-.03-.12-.02-.33-.01a3.37 3.37 0 0 0-3.34 3.82q0 .1.03.19 0 .07.04.16 0 .08.04.14l.06.18q0 .05.04.11.03.1.09.19l.04.08.1.2q.01.02.04.05l.16.23q.07.1.17.21a3.3 3.3 0 0 0-.83 2.21c0 .85.3 1.62.83 2.21a3.3 3.3 0 0 0-.83 2.21c0 .85.3 1.62.83 2.21l-.17.21-.02.02-.14.21q0 .02-.03.05l-.11.2-.04.08-.1.2-.03.11-.06.18-.04.14-.04.16-.03.19-.02.13-.01.33A3.4 3.4 0 0 0 3.02 21c.6.61 1.45.99 2.38.99l.33-.01q.06 0 .12-.02.1 0 .19-.03.07 0 .16-.04l.14-.04.18-.06.1-.04.2-.09.08-.04.2-.11q.03 0 .05-.03l.2-.14.03-.02.2-.17a3.4 3.4 0 0 0 4.43 0 3.32 3.32 0 0 0 4.42 0 3 3 0 0 0 .44.33q.03 0 .05.03l.2.11.08.04.2.09.1.04.19.06.14.04.16.04.19.03.13.02.33.01c.92 0 1.75-.37 2.36-.97l.02-.02c.6-.61.99-1.45.99-2.38l-.01-.33q0-.06-.02-.12 0-.1-.03-.19 0-.07-.04-.16l-.04-.14-.06-.18-.04-.11-.1-.19-.03-.08-.11-.2q0-.02-.03-.05l-.14-.21-.02-.02-.17-.21c.52-.59.83-1.36.83-2.21s-.31-1.62-.83-2.21M7.5 13.5 6 12l1.5-1.5L9 12zM12 6l1.5 1.5L12 9l-1.5-1.5zm0 12-1.5-1.5L12 15l1.5 1.5zm4.5-4.5L15 12l1.5-1.5L18 12z";
+        const CRACKER_PATH = "M21.17 12.01c.52-.59.83-1.36.83-2.21s-.31-1.62-.83-2.21l.17-.21q0-.01.02-.02l.14-.21q0-.02.03-.05.06-.1.1-.2l.05-.08.09-.2q.01-.05.04-.11l.06-.18q0-.08.04-.14.01-.07.04-.16l.03-.19q0-.06.02-.13v-.33a3.37 3.37 0 0 0-3.36-3.37l-.33.01q-.06 0-.12.02-.1 0-.2.03-.07 0-.15.04l-.14.04-.18.06-.11.04-.2.09-.07.04-.2.11q-.03 0-.05.03l-.21.14-.02.02-.21.17a3.4 3.4 0 0 0-4.42 0 3.3 3.3 0 0 0-2.21-.83c-.85 0-1.62.31-2.21.83l-.21-.17-.02-.02-.21-.14q-.02 0-.05-.03l-.2-.11-.08-.04-.2-.09-.11-.04-.18-.06-.14-.04-.16-.04-.2-.03-.12-.02-.33-.01a3.37 3.37 0 0 0-3.34 3.82q0 .1.03.19 0 .07.04.16 0 .08.04.14l.06.18q0 .05.04.11.03.1.09.19l.04.08.1.2q.01.02.04.05l.16.23q.07.1.17.21a3.3 3.3 0 0 0-.83 2.21c0 .85.3 1.62.83 2.21a3.3 3.3 0 0 0-.83 2.21c0 .85.3 1.62.83 2.21l-.17.21-.02-.02-.14.21q0 .02-.03.05l-.11.2-.04.08-.1.2-.03.11-.06.18-.04.14-.04.16-.03.19-.02.13-.01.33A3.4 3.4 0 0 0 3.02 21c.6.61 1.45.99 2.38.99l.33-.01q.06 0 .12-.02.1 0 .19-.03.07 0 .16-.04l.14-.04.18-.06.1-.04.2-.09.08-.04.2-.11q.03 0 .05-.03l.2-.14.03-.02.2-.17a3.4 3.4 0 0 0 4.43 0 3.32 3.32 0 0 0 4.42 0 3 3 0 0 0 .44.33q.03 0 .05.03l.2.11.08.04.2.09.1.04.19.06.14.04.16.04.19.03.13.02.33.01c.92 0 1.75-.37 2.36-.97l.02-.02c.6-.61.99-1.45.99-2.38l-.01-.33q0-.06-.02-.12 0-.1-.03-.19 0-.07-.04-.16l-.04-.14-.06-.18-.04-.11-.1-.19-.03-.08-.11-.2q0-.02-.03-.05l-.14-.21-.02-.02-.17-.21c.52-.59.83-1.36.83-2.21s-.31-1.62-.83-2.21M7.5 13.5 6 12l1.5-1.5L9 12zM12 6l1.5 1.5L12 9l-1.5-1.5zm0 12-1.5-1.5L12 15l1.5 1.5zm4.5-4.5L15 12l1.5-1.5L18 12z";
 
         const ICON = {
             cracker: `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" style="margin-right:4px; opacity:1;"><path fill="currentColor" d="${CRACKER_PATH}"></path></svg>`,
@@ -332,7 +335,6 @@
         }
 
         function startObserver() {
-            // 사용자 요청에 따른 5초 주기 감지 경량화 방식 유지
             setInterval(updateTurnCount, 5000);
         }
 
@@ -484,20 +486,9 @@
     }
 
     // ==========================================
-    // 모듈 5: 고정형 RP 대사 입력 도우미 (☆ 버튼 정렬 및 점선 축소 패치)
+    // 모듈 5: 고정형 RP 대사 입력 도우미 (오토스크롤, 슬래시 및 점선만 예쁘게 유지)
     // ==========================================
     function initRPToolbar() {
-        const fixedTools = [
-            { icon: '★', val: '*' },
-            { icon: '♠', val: '"' },
-            { icon: '♤', val: "'" },
-            { icon: '◆', val: '`' },
-            { icon: '□', val: '[' },
-            { icon: '■', val: ']' },
-            { icon: '♧', val: '(OOC：' },
-            { icon: '♣', val: ')' }
-        ];
-
         if (!document.getElementById('hide-native-rp-btns')) {
             const style = document.createElement('style');
             style.id = 'hide-native-rp-btns';
@@ -508,76 +499,6 @@
             `;
             document.head.appendChild(style);
         }
-
-        function wrapText(value) {
-            const inputEl = document.querySelector('textarea, div.__chat_input_textarea[contenteditable="true"], .tiptap.ProseMirror');
-            if (!inputEl) return;
-
-            if (inputEl.tagName !== 'TEXTAREA' && inputEl.isContentEditable) {
-                inputEl.focus();
-                const selection = window.getSelection();
-                if (!selection.rangeCount) return;
-
-                document.execCommand("insertText", false, value);
-                return;
-            }
-
-            const start = inputEl.selectionStart || 0;
-            const end = inputEl.selectionEnd || 0;
-            const text = inputEl.value || '';
-            const before = text.substring(0, start);
-            const after = text.substring(end, text.length);
-
-            const newValue = before + value + after;
-
-            const nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, "value").set;
-            nativeInputValueSetter.call(inputEl, newValue);
-            inputEl.dispatchEvent(new Event('input', { bubbles: true }));
-
-            inputEl.focus();
-            inputEl.setSelectionRange(start + value.length, start + value.length);
-        }
-
-        function createToolButton(iconText, onClick) {
-            const btn = document.createElement('button');
-            btn.className = "relative inline-flex items-center justify-center rounded-full text-sm font-medium transition-colors border border-border bg-card text-line-gray-1 hover:bg-secondary p-0 size-7";
-            btn.type = "button";
-            btn.innerHTML = `<span style="font-size:15px;">${iconText}</span>`;
-
-            btn.onmousedown = (e) => e.preventDefault();
-            btn.onclick = (e) => {
-                e.preventDefault();
-                onClick();
-            };
-            return btn;
-        }
-
-        document.addEventListener('keydown', (e) => {
-            if (!e.altKey) return;
-            let idx = -1;
-            const code = e.code;
-            const key = e.key;
-
-            if (code === 'Backquote' || key === '`' || key === '~') idx = 0;
-            else if (code === 'Digit1' || key === '1') idx = 1;
-            else if (code === 'Digit2' || key === '2') idx = 2;
-            else if (code === 'Digit3' || key === '3') idx = 3;
-            else if (code === 'Digit4' || key === '4') idx = 4;
-            else if (code === 'Digit5' || key === '5') idx = 5;
-            else if (code === 'Digit6' || key === '6') idx = 6;
-            else if (code === 'Digit7' || key === '7') idx = 7;
-
-            if (idx !== -1) {
-                const inputEl = document.querySelector('textarea, div.__chat_input_textarea[contenteditable="true"], .tiptap.ProseMirror');
-                if (document.activeElement === inputEl || inputEl?.contains(document.activeElement)) {
-                    if (fixedTools[idx]) {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        wrapText(fixedTools[idx].val);
-                    }
-                }
-            }
-        }, true);
 
         setInterval(() => {
             const btnContainer = document.querySelector('.flex.items-center.space-x-2');
@@ -595,6 +516,12 @@
             const slashBtn = Array.from(btnContainer.querySelectorAll('button')).find(btn => btn.textContent.trim() === '/');
             if (slashBtn && !slashBtn.classList.contains('igx-keep-btn')) {
                 slashBtn.classList.add('igx-keep-btn');
+                
+                // 슬래시 버튼 클릭 시 네이티브 입력 임시 허용
+                slashBtn.addEventListener('click', () => {
+                    window.allowNativeFocus = true;
+                    setTimeout(() => { window.allowNativeFocus = false; }, 1000);
+                }, true);
             }
 
             let toolWrapper = document.getElementById('custom-rp-tools');
@@ -614,28 +541,15 @@
                     toolWrapper.appendChild(slashBtn);
                 }
 
-                // 단축어 전용 수동 입력창을 호출하는 별(☆) 버튼 추가 및 슬래시(/) 오른쪽에 배치
-                const shortcutBtn = createToolButton('☆', () => {
-                    if (typeof window.openShortcutModal === 'function') {
-                        window.openShortcutModal();
-                    }
-                });
-                toolWrapper.appendChild(shortcutBtn);
-
+                // 기획 수정: 점선만 남기고 기존 기호 및 ☆ 버튼 삭제
                 const divider = document.createElement('div');
                 divider.className = 'custom-rp-divider'; 
                 divider.style.width = '1px';
                 divider.style.height = '14px';
                 divider.style.borderLeft = '1px dashed currentColor';
                 divider.style.opacity = '0.3';
-                // 분할 점선과 양옆 버튼 사이의 간격을 일반 도우미 버튼 간격 수준으로 좁힘
                 divider.style.margin = '0 4px';
                 toolWrapper.appendChild(divider);
-
-                fixedTools.forEach((t) => {
-                    const btn = createToolButton(t.icon, () => wrapText(t.val));
-                    toolWrapper.appendChild(btn);
-                });
 
                 if (recommendBtn) {
                     btnContainer.insertBefore(toolWrapper, recommendBtn);
@@ -654,7 +568,7 @@
     }
 
     // ==========================================
-    // 모듈 6: 입력창 자동 임시저장 (순수 원본 로직)
+    // 모듈 6: 입력창 자동 임시저장 (순수 원본)
     // ==========================================
     function initAutoSaver() {
         function getRoomId() {
@@ -728,7 +642,7 @@
     }
 
     // ==========================================
-    // 모듈 7: 라디오존데 (순수 원본 로직)
+    // 모듈 7: 라디오존데 (순수 원본)
     // ==========================================
     function initRadiosonde() {
         const MODELS = [
@@ -932,7 +846,7 @@
     }
 
     // ==========================================
-    // 모듈 8: 채팅방 자동 스크롤 
+    // 모듈 8: 채팅방 자동 스크롤 (순수 원본)
     // ==========================================
     function initAutoScroll() {
         const WAIT_TIME = 500;
@@ -1050,36 +964,109 @@
     }
 
     // ==========================================
-    // 모듈 9: 단축어 전용 수동 입력 팝업 모듈 (신설 분리 완료)
+    // 모듈 9: 단축어 및 대치용 고품격 팝업 입력기 모듈
     // ==========================================
     function initShortcutHelper() {
+        function insertSymbolAndCenter(openSymbol, closeSymbol) {
+            const textarea = document.getElementById('igx-shortcut-textarea');
+            if (!textarea) return;
+
+            const start = textarea.selectionStart;
+            const end = textarea.selectionEnd;
+            const text = textarea.value;
+
+            const before = text.substring(0, start);
+            const selected = text.substring(start, end);
+            const after = text.substring(end);
+
+            const newText = before + openSymbol + selected + closeSymbol + after;
+            textarea.value = newText;
+
+            const newCursorPos = start + openSymbol.length + selected.length;
+            textarea.focus();
+            textarea.setSelectionRange(newCursorPos, newCursorPos);
+            
+            textarea.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+
         function createShortcutModal() {
             if (document.getElementById('igx-shortcut-modal')) return;
 
             const modal = document.createElement('div');
             modal.id = 'igx-shortcut-modal';
             modal.style.cssText = `
-                display: none; position: fixed; bottom: 85px; left: 5%; right: 5%; 
+                display: none; position: fixed; bottom: 50px; left: 5%; right: 5%; 
                 background: #242424; border: 1px solid #444; border-radius: 12px; 
-                padding: 12px; z-index: 999999; box-shadow: 0 8px 30px rgba(0,0,0,0.5);
+                padding: 24px; z-index: 999999; box-shadow: 0 8px 30px rgba(0,0,0,0.5);
                 font-family: 'Pretendard', sans-serif;
             `;
-            modal.innerHTML = `
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-                    <span style="font-weight:700; font-size:12px; color:#eee;">☆ 단축어 입력기</span>
-                    <button id="igx-shortcut-close" style="background:none; border:none; color:#888; font-size:18px; cursor:pointer; padding: 0 4px;">×</button>
-                </div>
-                <textarea id="igx-shortcut-textarea" placeholder="여기에 단축어를 입력해 대치하세요..." style="width:100%; height:110px; background:rgba(0,0,0,0.2); border:1px solid rgba(255,255,255,0.1); border-radius:8px; padding:8px; color:#eee; font-size:12px; resize:none; outline:none; font-family:inherit;"></textarea>
-                <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:8px;">
-                    <button id="igx-shortcut-cancel" style="background:rgba(255,255,255,0.1); border:none; border-radius:6px; padding:6px 12px; font-size:11px; color:#ccc; cursor:pointer;">취소</button>
-                    <button id="igx-shortcut-insert" style="background:#FFA600; border:none; border-radius:6px; padding:6px 12px; font-size:11px; color:#000; font-weight:700; cursor:pointer;">메인창에 입력</button>
-                </div>
+
+            // 팝업 내부 상단 툴바 구성 (기호 버튼 배치)
+            const topToolbar = document.createElement('div');
+            topToolbar.style.cssText = "display: flex; gap: 6px; margin-bottom: 12px; justify-content: flex-start; align-items: center;";
+
+            const symbols = [
+                { icon: '★', open: '*', close: '*' },
+                { icon: '♠', open: '"', close: '"' },
+                { icon: '♤', open: "'", close: "'" },
+                { icon: '◆', open: '`', close: '`' },
+                { icon: '■', open: '[', close: ']' },
+                { icon: '♣', open: '(OOC：', close: ')' }
+            ];
+
+            symbols.forEach(s => {
+                const btn = document.createElement('button');
+                btn.className = "relative inline-flex items-center justify-center rounded-full text-sm font-medium transition-colors border border-border bg-card text-line-gray-1 hover:bg-secondary p-0 size-7";
+                btn.type = "button";
+                btn.style.cursor = 'pointer';
+                btn.innerHTML = `<span style="font-size:15px; font-weight: bold;">${s.icon}</span>`;
+                btn.onmousedown = (e) => e.preventDefault();
+                btn.onclick = (e) => {
+                    e.preventDefault();
+                    insertSymbolAndCenter(s.open, s.close);
+                };
+                topToolbar.appendChild(btn);
+            });
+
+            // 입력 영역 (6~7줄 입력 대응 높이 고정)
+            const textarea = document.createElement('textarea');
+            textarea.id = 'igx-shortcut-textarea';
+            textarea.placeholder = "여기에 대사를 입력하세요...";
+            textarea.style.cssText = `
+                width: 100%; height: 130px; background: rgba(0,0,0,0.2); 
+                border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; 
+                padding: 8px; color: #eee; font-size: 12px; resize: none; 
+                outline: none; font-family: inherit; overflow-y: auto;
             `;
+
+            // 하단 조작 버튼 구성 (가운데 정렬 및 크기 동일화)
+            const bottomToolbar = document.createElement('div');
+            bottomToolbar.style.cssText = "display: flex; justify-content: center; gap: 12px; margin-top: 12px;";
+
+            const cancelBtn = document.createElement('button');
+            cancelBtn.id = 'igx-shortcut-cancel';
+            cancelBtn.textContent = '취소';
+            cancelBtn.style.cssText = `
+                border: 1px solid rgba(255,255,255,0.1); background: transparent; 
+                border-radius: 6px; padding: 8px 24px; font-size: 12px; color: #ccc; 
+                cursor: pointer; font-weight: 500; min-width: 90px; text-align: center;
+            `;
+
+            const insertBtn = document.createElement('button');
+            insertBtn.id = 'igx-shortcut-insert';
+            insertBtn.textContent = '입력';
+            insertBtn.style.cssText = `
+                background: #FFA600; border: none; border-radius: 6px; 
+                padding: 8px 24px; font-size: 12px; color: #000; 
+                font-weight: 700; cursor: pointer; min-width: 90px; text-align: center;
+            `;
+
+            bottomToolbar.append(cancelBtn, insertBtn);
+            modal.append(topToolbar, textarea, bottomToolbar);
             document.body.appendChild(modal);
 
-            document.getElementById('igx-shortcut-close').onclick = closeShortcutModal;
-            document.getElementById('igx-shortcut-cancel').onclick = closeShortcutModal;
-            document.getElementById('igx-shortcut-insert').onclick = insertShortcutText;
+            cancelBtn.onclick = closeShortcutModal;
+            insertBtn.onclick = insertShortcutText;
         }
 
         function closeShortcutModal() {
@@ -1094,18 +1081,23 @@
             if (text) {
                 const mainInput = getSafeMainInput();
                 if (mainInput) {
+                    window.allowNativeFocus = true; // 임시 허용
                     mainInput.focus();
                     document.execCommand("insertText", false, text);
+                    setTimeout(() => { 
+                        window.allowNativeFocus = false; 
+                        mainInput.blur(); 
+                    }, 50);
                 }
             }
             closeShortcutModal();
         }
 
-        // 모듈 5에서 수월하게 접근할 수 있도록 글로벌 전역 스코프에 바인딩
         window.openShortcutModal = function () {
             createShortcutModal();
             const modal = document.getElementById('igx-shortcut-modal');
             const textarea = document.getElementById('igx-shortcut-textarea');
+            const cancelBtn = document.getElementById('igx-shortcut-cancel');
             if (!modal || !textarea) return;
 
             const mainInput = getSafeMainInput();
@@ -1129,8 +1121,10 @@
                 textarea.style.background = isDark ? 'rgba(0,0,0,0.2)' : 'rgba(0,0,0,0.03)';
                 textarea.style.borderColor = isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)';
                 
-                const titleSpan = modal.querySelector('span');
-                if (titleSpan) titleSpan.style.color = isDark ? '#eee' : '#111';
+                if (cancelBtn) {
+                    cancelBtn.style.color = isDark ? '#ccc' : '#444';
+                    cancelBtn.style.borderColor = isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.15)';
+                }
             }
 
             modal.style.display = 'block';
@@ -1140,7 +1134,35 @@
     }
 
     // ==========================================
-    // 통합팩 동시 실행 관리 및 레이아웃 밀림 해결사 (순수 원본 복구 완료)
+    // 메인 TIPTAP 클릭 감지 및 차단 관리자 (신설)
+    // ==========================================
+    let lastHookedInput = null;
+    function hookMainInputInterception() {
+        const inputEl = getSafeMainInput();
+        if (!inputEl) {
+            lastHookedInput = null;
+            return;
+        }
+        if (lastHookedInput === inputEl) return;
+        lastHookedInput = inputEl;
+
+        const interceptFocus = (e) => {
+            if (window.allowNativeFocus) return;
+            e.preventDefault();
+            e.stopPropagation();
+            inputEl.blur();
+            if (typeof window.openShortcutModal === 'function') {
+                window.openShortcutModal();
+            }
+        };
+
+        // 입력창 터치 및 포커스 순간 가로채기
+        inputEl.addEventListener('focus', interceptFocus, true);
+        inputEl.addEventListener('pointerdown', interceptFocus, true);
+    }
+
+    // ==========================================
+    // 통합팩 동시 실행 관리 및 레이아웃 밀림 해결사
     // ==========================================
     function startAll() {
         setInterval(() => {
@@ -1152,6 +1174,8 @@
                 }
             }
         }, 1000);
+
+        setInterval(hookMainInputInterception, 500);
 
         try {
             setTimeout(() => {
