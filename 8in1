@@ -1,8 +1,8 @@
 // ==UserScript==
-// @name         크랙 8 in 1 통합팩 (V7.6.0 - 멀티라인 엔터 대치 충돌 근본 해결 버전)
+// @name         크랙 8 in 1 통합팩 (V7.7.0 - 통합 타이핑 잠금 적용 및 단축어 완벽 대응)
 // @namespace    https://crack.wrtn.ai/
-// @version      7.6.0
-// @description  입력창 외부 좌(크래커)·우(라디오존데) 고정, 대사 도우미 1글자화 및 멀티라인 단축어 줄바꿈 입력 완벽 패치
+// @version      7.7.0
+// @description  입력창 외부 좌(크래커)·우(라디오존데) 고정, 대사 도우미 단순화 및 타이핑 전역 잠금을 통한 줄바꿈 단축어 패치
 // @author       User & Gemini (수정)
 // @match        https://crack.wrtn.ai/*
 // @grant        GM_addStyle
@@ -16,6 +16,29 @@
 (function () {
     'use strict';
 
+    // 전역 타이핑 상태 잠금 변수 (타이핑 중 모든 백그라운드 오작동을 제어하는 핵심 브릿지)
+    let globalTypingLock = false;
+    let globalTypingLockTimeout = null;
+
+    // 타이핑이 감지되면 4초간 모든 백그라운드 탐색 및 스타일 연산을 완벽히 멈춥니다.
+    function triggerTypingLock() {
+        globalTypingLock = true;
+        if (globalTypingLockTimeout) clearTimeout(globalTypingLockTimeout);
+        globalTypingLockTimeout = setTimeout(() => {
+            globalTypingLock = false;
+        }, 4000);
+    }
+
+    // 입력창에 전역 타이핑 잠금 리스너를 결합하는 함수
+    function bindTypingLock(inputEl) {
+        if (!inputEl || inputEl.dataset.lockHooked === 'true') return;
+        inputEl.dataset.lockHooked = 'true';
+        
+        inputEl.addEventListener('input', triggerTypingLock);
+        inputEl.addEventListener('keydown', triggerTypingLock);
+        inputEl.addEventListener('compositionstart', triggerTypingLock);
+    }
+
     // [도움함수] 여러 입력창 중 '진짜 메인 입력창'만 골라내는 기능
     function getSafeMainInput() {
         const inputs = document.querySelectorAll('textarea[placeholder*="메시지"], div.__chat_input_textarea, .tiptap.ProseMirror');
@@ -26,8 +49,9 @@
         return null;
     }
 
-    // [도움함수] 사용자가 현재 입력창을 사용 중인지 감지하는 기능
+    // 사용자가 입력 중인지 다각도로 검증하는 함수
     function isUserTyping() {
+        if (globalTypingLock) return true;
         const activeEl = document.activeElement;
         return activeEl && (activeEl.closest('.ProseMirror') || activeEl.closest('textarea') || activeEl.isContentEditable);
     }
@@ -296,14 +320,14 @@
     }
 
     // ==========================================
-    // 모듈 4: 외부 좌측 배치 크래커 표시기 (5초 주기 감지 및 안전 체크)
+    // 모듈 4: 외부 좌측 배치 크래커 표시기 (5초 주기 감지 및 타이핑 완전 보호)
     // ==========================================
     function initTurnCracker() {
         const SELECTOR = {
             messageGroup: 'div[data-message-group-id]'
         };
 
-        const CRACKER_PATH = "M21.17 12.01c.52-.59.83-1.36.83-2.21s-.31-1.62-.83-2.21l.17-.21q0-.01.02-.02l.14-.21q0-.02.03-.05.06-.1.1-.2l.05-.08.09-.2q.01-.05.04-.11l.06-.18q0-.08.04-.14.01-.07.04-.16l.03-.19q0-.06.02-.13v-.33a3.37 3.37 0 0 0-3.36-3.37l-.33.01q-.06 0-.12.02-.1 0-.2.03-.07 0-.15.04l-.14.04-.18.06-.11.04-.2.09-.07.04-.2.11q-.03 0-.05.03l-.21.14-.02.02-.21.17a3.4 3.4 0 0 0-4.42 0 3.3 3.3 0 0 0-2.21-.83c-.85 0-1.62.31-2.21.83l-.21-.17-.02-.02-.21-.14q-.02 0-.05-.03l-.2-.11-.08-.04-.2-.09-.11-.04-.18-.06-.14-.04-.16-.04-.2-.03-.12-.02-.33-.01a3.37 3.37 0 0 0-3.34 3.82q0 .1.03.19 0 .07.04.16 0 .08.04.14l.06.18q0 .05.04.11.03.1.09.19l.04.08.1.2q.01.02.04.05l.16.23q.07.1.17.21a3.3 3.3 0 0 0-.83 2.21c0 .85.3 1.62.83 2.21a3.3 3.3 0 0 0-.83 2.21c0 .85.3 1.62.83 2.21l-.17.21-.02.02-.14.21q0 .02-.03.05l-.11.2-.04.08-.1.2-.03.11-.06.18-.04.14-.04.16-.03.19-.02.13-.01.33A3.4 3.4 0 0 0 3.02 21c.6.61 1.45.99(2.38.99l.33-.01q.06 0 .12-.02.1 0 .19-.03.07 0 .16-.04l.14-.04.18-.06.1-.04.2-.09.08-.04.2-.11q.03 0 .05-.03l.2-.14.03-.02.2-.17a3.4 3.4 0 0 0 4.43 0 3.32 3.32 0 0 0 4.42 0 3 3 0 0 0 .44.33q.03 0 .05.03l.2.11.08.04.2.09.1.04.19.06.14.04.16.04.19.03.13.02.33.01c.92 0 1.75-.37 2.36-.97l.02-.02c.6-.61.99-1.45.99-2.38l-.01-.33q0-.06-.02-.12 0-.1-.03-.19 0-.07-.04-.16l-.04-.14-.06-.18-.04-.11-.1-.19-.03-.08-.11-.2q0-.02-.03-.05l-.14-.21-.02-.02-.17-.21c.52-.59.83-1.36.83-2.21s-.31-1.62-.83-2.21M7.5 13.5 6 12l1.5-1.5L9 12zM12 6l1.5 1.5L12 9l-1.5-1.5zm0 12-1.5-1.5L12 15l1.5 1.5zm4.5-4.5L15 12l1.5-1.5L18 12z";
+        const CRACKER_PATH = "M21.17 12.01c.52-.59.83-1.36.83-2.21s-.31-1.62-.83-2.21l.17-.21q0-.01.02-.02l.14-.21q0-.02.03-.05.06-.1.1-.2l.05-.08.09-.2q.01-.05.04-.11l.06-.18q0-.08.04-.14.01-.07.04-.16l.03-.19q0-.06.02-.13v-.33a3.37 3.37 0 0 0-3.36-3.37l-.33.01q-.06 0-.12.02-.1 0-.2.03-.07 0-.15.04l-.14.04-.18.06-.11.04-.2.09-.07.04-.2.11q-.03 0-.05.03l-.21.14-.02.02-.21.17a3.4 3.4 0 0 0-4.42 0 3.3 3.3 0 0 0-2.21-.83c-.85 0-1.62.31-2.21.83l-.21-.17-.02-.02-.21-.14q-.02 0-.05-.03l-.2-.11-.08-.04-.2-.09-.11-.04-.18-.06-.14-.04-.16-.04-.2-.03-.12-.02-.33-.01a3.37 3.37 0 0 0-3.34 3.82q0 .1.03.19 0 .07.04.16 0 .08.04.14l.06.18q0 .05.04.11.03.1.09.19l.04.08.1.2q.01.02.04.05l.16.23q.07.1.17.21a3.3 3.3 0 0 0-.83 2.21c0 .85.3 1.62.83 2.21a3.3 3.3 0 0 0-.83 2.21c0 .85.3 1.62.83 2.21l-.17.21-.02.02-.14.21q0 .02-.03.05l-.11.2-.04.08-.1.2-.03.11-.06.18-.04.14-.04.16-.03.19-.02.13-.01.33A3.4 3.4 0 0 0 3.02 21c.6.61 1.45.99 2.38.99l.33-.01q.06 0 .12-.02.1 0 .19-.03.07 0 .16-.04l.14-.04.18-.06.1-.04.2-.09.08-.04.2-.11q.03 0 .05-.03l.2-.14.03-.02.2-.17a3.4 3.4 0 0 0 4.43 0 3.32 3.32 0 0 0 4.42 0 3 3 0 0 0 .44.33q.03 0 .05.03l.2.11.08.04.2.09.1.04.19.06.14.04.16.04.19.03.13.02.33.01c.92 0 1.75-.37 2.36-.97l.02-.02c.6-.61.99-1.45.99-2.38l-.01-.33q0-.06-.02-.12 0-.1-.03-.19 0-.07-.04-.16l-.04-.14-.06-.18-.04-.11-.1-.19-.03-.08-.11-.2q0-.02-.03-.05l-.14-.21-.02-.02-.17-.21c.52-.59.83-1.36.83-2.21s-.31-1.62-.83-2.21M7.5 13.5 6 12l1.5-1.5L9 12zM12 6l1.5 1.5L12 9l-1.5-1.5zm0 12-1.5-1.5L12 15l1.5 1.5zm4.5-4.5L15 12l1.5-1.5L18 12z";
 
         const ICON = {
             cracker: `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" style="margin-right:4px; opacity:1;"><path fill="currentColor" d="${CRACKER_PATH}"></path></svg>`,
@@ -338,7 +362,7 @@
         }
 
         function startObserver() {
-            // 주기적 감지 주기를 5초(5000ms)로 넓혀 부하를 완전히 최소화합니다.
+            // 주기적 체크 타이머가 도는 도중에도 전역 잠금이 활성화되어 있으면 무시하도록 조치
             setInterval(updateTurnCount, 5000);
         }
 
@@ -417,7 +441,7 @@
         }
 
         function updateTurnCount() {
-            // 사용자가 적극적으로 입력 중일 때는 불필요한 DOM 스타일 계산 및 리플로우를 완전 차단합니다.
+            // 전역 타이핑 상태 잠금이 활성화되어 있다면 절대 DOM 연산을 시작조차 하지 않습니다. (연쇄 줄바꿈 안전 통제)
             if (isUserTyping()) return;
 
             const now = Date.now();
@@ -527,7 +551,6 @@
                 const selection = window.getSelection();
                 if (!selection.rangeCount) return;
 
-                // 특수기호를 양쪽에 삽입하고 커서를 역방향으로 땡기던 방식을 전면 중단하고, 1자만 온전히 커서 위치에 바로 입력합니다.
                 document.execCommand("insertText", false, value);
                 return;
             }
@@ -655,7 +678,7 @@
     }
 
     // ==========================================
-    // 모듈 6: 입력창 자동 임시저장 (단축어 타이핑 버퍼 지연 보호 메커니즘으로 수정)
+    // 모듈 6: 입력창 자동 임시저장 (단축어 타이핑 전역 잠금 적용)
     // ==========================================
     function initAutoSaver() {
         function getRoomId() {
@@ -717,11 +740,16 @@
                 inputEl.dataset.draftHooked = 'true';
                 let saveTimeout = null;
 
-                // 타이핑 도중 실시간 감시 연산을 완전히 배제하고, 입력이 멈춘 상태가 3초간 유지되어야만 안전하게 저장 처리를 하도록 지연시킵니다.
-                // 이 부분을 원래의 실시간 동기식 innerText 로딩 코드로 되돌렸을 시, 줄바꿈 단축어 입력마다 리플로우 충돌이 일어났던 것입니다.
+                // 타이핑 전역 락 리스너 바인딩
+                bindTypingLock(inputEl);
+
                 inputEl.addEventListener('input', () => {
+                    // 키보드 입력을 즉시 전대전 감지하여 잠금 트리거 작동
+                    triggerTypingLock();
+
                     if (saveTimeout) clearTimeout(saveTimeout);
                     saveTimeout = setTimeout(() => {
+                        // 3초간 입력이 완전히 종료되었음이 확인되었을 때에만 리플로우 수집을 허용합니다.
                         const text = isEditor ? (inputEl.innerText || '') : (inputEl.value || '');
                         if (text.trim() === '') {
                             localStorage.removeItem(getDraftKey());
@@ -731,8 +759,10 @@
                     }, 3000); 
                 });
 
-                // 가장 완벽하고 가벼운 백업 타이밍: 사용자가 전송을 누르거나 입력 영역을 벗어나 포커스(Blur)가 사라졌을 때 지연 없이 완벽 저장을 완수합니다.
                 inputEl.addEventListener('blur', () => {
+                    // 단축어 줄바꿈 도중 발생하는 가짜 포커스 해제(Blur) 시에는 절대 임시저장을 실행하지 못하게 잠금 대조
+                    if (globalTypingLock) return;
+
                     if (saveTimeout) clearTimeout(saveTimeout);
                     const text = isEditor ? (inputEl.innerText || '') : (inputEl.value || '');
                     if (text.trim() === '') {
@@ -747,7 +777,7 @@
     }
 
     // ==========================================
-    // 모듈 7: 라디오존데 (색상 및 위치 탐색 연산 과부하 해제)
+    // 모듈 7: 라디오존데 (타이핑 중 연산 완전 차단)
     // ==========================================
     function initRadiosonde() {
         const MODELS = [
@@ -925,7 +955,7 @@
                 return;
             }
             
-            // 사용자가 글을 치는 과정에서 라디오존데가 1초마다 getComputedStyle(무거운 연산)을 호출해 키보드를 방해하는 현상을 원천 방어합니다.
+            // 전역 타이핑 상태 잠금이 활성화되어 있는 동안에는 무거운 스타일 검사 연산(getComputedStyle)을 전면 중지합니다.
             if (isUserTyping()) return;
 
             const container = inputEl.closest(".flex.w-full.flex-col.rounded-lg") || inputEl.closest(".flex.w-full.flex-col") || inputEl.parentElement;
@@ -1076,21 +1106,15 @@
     // ==========================================
     function startAll() {
         setInterval(() => {
+            // 전역 타이핑 상태 잠금이 활성화되어 있는 동안에는 스크롤락 부모 변경 연산을 전면 중지합니다.
+            if (isUserTyping()) return;
+
             const inputEl = getSafeMainInput();
             if (inputEl) {
                 const scrollParent = inputEl.closest('.overflow-y-scroll');
                 if (scrollParent) {
-                    if (isUserTyping()) {
-                        // 사용자가 단축어(줄바꿈 포함)를 대치하여 입력하는 동안에는 잠금을 자동으로 일시 해제합니다.
-                        // 이 조치를 통해 안드로이드 크롬이 정상적으로 caret(커서)을 배치하여 단축어 밀림을 방지합니다.
-                        if (scrollParent.style.overflowY === 'hidden') {
-                            scrollParent.style.overflowY = 'auto';
-                        }
-                    } else {
-                        // 입력 상태가 아닐 때는 기존 잠금 상태로 강제 복귀하여 높이 이탈 및 대사도우미 밀림을 원천 예방합니다.
-                        if (scrollParent.style.overflowY !== 'hidden') {
-                            scrollParent.style.overflowY = 'hidden';
-                        }
+                    if (scrollParent.style.overflowY !== 'hidden') {
+                        scrollParent.style.overflowY = 'hidden';
                     }
                 }
             }
