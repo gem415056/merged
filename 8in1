@@ -1,8 +1,8 @@
 // ==UserScript==
-// @name         크랙 9 in 1 통합팩 (V8.2.0 - 모바일 최적화 및 팝업 편집 동기화 완료)
+// @name         크랙 9 in 1 통합팩 (V9.0.0 - 인라인 텍스트 대치 및 툴바 롤백 완료)
 // @namespace    https://crack.wrtn.ai/
-// @version      8.2.0
-// @description  입력창 외부 좌(크래커)·우(라디오존데) 고정, 모바일 터치 스크롤 버그 해결 및 팝업 텍스트 편집 동기화 완료
+// @version      9.0.0
+// @description  불안정한 TIPTAP을 네이티브 텍스트박스로 인라인 대치, 대사 도우미 단축키 툴바 완벽 복구
 // @author       User & Gemini (수정)
 // @match        https://crack.wrtn.ai/*
 // @grant        GM_addStyle
@@ -18,6 +18,7 @@
 
     // 글로벌 네이티브 입력 허용 플래그
     window.allowNativeFocus = false;
+    window.isSyncingText = false;
 
     // [도움함수] 여러 입력창 중 '진짜 메인 입력창'만 골라내는 기능
     function getSafeMainInput() {
@@ -486,7 +487,33 @@
     }
 
     // ==========================================
-    // 모듈 5: 고정형 RP 대사 입력 도우미 (오토스크롤, 슬래시 및 점선만 예쁘게 유지)
+    // 대사/기호 인라인 처리 함수
+    // ==========================================
+    function insertSymbolToOverlay(openSymbol, closeSymbol) {
+        const textarea = document.getElementById('igx-native-textarea-overlay');
+        if (!textarea) return;
+
+        const start = textarea.selectionStart;
+        const end = textarea.selectionEnd;
+        const text = textarea.value;
+
+        const before = text.substring(0, start);
+        const selected = text.substring(start, end);
+        const after = text.substring(end);
+
+        const newText = before + openSymbol + selected + closeSymbol + after;
+        textarea.value = newText;
+
+        const newCursorPos = start + openSymbol.length + selected.length;
+        textarea.focus();
+        textarea.setSelectionRange(newCursorPos, newCursorPos);
+
+        // 실시간 전송 대치 실행
+        syncSeamless(newText);
+    }
+
+    // ==========================================
+    // 모듈 5: 고정형 RP 대사 입력 도우미 (메인 툴바에 모든 단축키 이식 완료)
     // ==========================================
     function initRPToolbar() {
         if (!document.getElementById('hide-native-rp-btns')) {
@@ -517,11 +544,10 @@
             if (slashBtn && !slashBtn.classList.contains('igx-keep-btn')) {
                 slashBtn.classList.add('igx-keep-btn');
                 
-                // 슬래시 버튼 클릭 시 일시적으로 투명 오버레이를 끄고 네이티브 포커스를 허용
                 slashBtn.addEventListener('click', () => {
                     window.allowNativeFocus = true;
-                    const overlay = document.getElementById('igx-tiptap-overlay');
-                    if (overlay) overlay.style.display = 'none';
+                    const overlayText = document.getElementById('igx-native-textarea-overlay');
+                    if (overlayText) overlayText.style.display = 'none'; // 슬래시 사용 중에는 대치 창 숨김
                     setTimeout(() => { window.allowNativeFocus = false; }, 1500);
                 }, true);
             }
@@ -543,6 +569,7 @@
                     toolWrapper.appendChild(slashBtn);
                 }
 
+                // 점선 구분선
                 const divider = document.createElement('div');
                 divider.className = 'custom-rp-divider'; 
                 divider.style.width = '1px';
@@ -551,6 +578,30 @@
                 divider.style.opacity = '0.3';
                 divider.style.margin = '0 4px';
                 toolWrapper.appendChild(divider);
+
+                // 오리지널 자리에 기호 도우미 배치 (볼드 없는 본래 스타일로 롤백)
+                const symbols = [
+                    { icon: '★', open: '*', close: '*' },
+                    { icon: '♠', open: '"', close: '"' },
+                    { icon: '♤', open: "'", close: "'" },
+                    { icon: '◆', open: '`', close: '`' },
+                    { icon: '■', open: '[', close: ']' },
+                    { icon: '♣', open: '(OOC：', close: ')' }
+                ];
+
+                symbols.forEach(s => {
+                    const btn = document.createElement('button');
+                    btn.className = "relative inline-flex items-center justify-center rounded-full text-sm font-medium transition-colors border border-border bg-card text-line-gray-1 hover:bg-secondary p-0 size-7";
+                    btn.type = "button";
+                    btn.style.cursor = 'pointer';
+                    btn.innerHTML = `<span style="font-size:15px; font-weight:normal;">${s.icon}</span>`;
+                    btn.onmousedown = (e) => e.preventDefault();
+                    btn.onclick = (e) => {
+                        e.preventDefault();
+                        insertSymbolToOverlay(s.open, s.close);
+                    };
+                    toolWrapper.appendChild(btn);
+                });
 
                 if (recommendBtn) {
                     btnContainer.insertBefore(toolWrapper, recommendBtn);
@@ -965,238 +1016,109 @@
     }
 
     // ==========================================
-    // 모듈 9: 단축어 및 대치용 고품격 팝업 입력기 모듈 (슬림화 및 스크롤 패치 완료)
+    // TIPTAP 비가시화 및 네이티브 입력 박스 직접 이식 기술
     // ==========================================
-    function initShortcutHelper() {
-        function insertSymbolAndCenter(openSymbol, closeSymbol) {
-            const textarea = document.getElementById('igx-shortcut-textarea');
-            if (!textarea) return;
+    function syncSeamless(text) {
+        if (window.isSyncingText) return;
+        const tiptap = getSafeMainInput();
+        const myTextarea = document.getElementById('igx-native-textarea-overlay');
+        if (!tiptap || !myTextarea) return;
 
-            const start = textarea.selectionStart;
-            const end = textarea.selectionEnd;
-            const text = textarea.value;
+        const start = myTextarea.selectionStart;
+        const end = myTextarea.selectionEnd;
 
-            const before = text.substring(0, start);
-            const selected = text.substring(start, end);
-            const after = text.substring(end);
+        window.isSyncingText = true;
 
-            const newText = before + openSymbol + selected + closeSymbol + after;
-            textarea.value = newText;
+        tiptap.focus();
+        document.execCommand('selectAll', false, null);
+        document.execCommand('insertText', false, text);
 
-            const newCursorPos = start + openSymbol.length + selected.length;
-            textarea.focus();
-            textarea.setSelectionRange(newCursorPos, newCursorPos);
-            
-            textarea.dispatchEvent(new Event('input', { bubbles: true }));
-        }
+        myTextarea.focus();
+        myTextarea.setSelectionRange(start, end);
 
-        function createShortcutModal() {
-            if (document.getElementById('igx-shortcut-modal')) return;
-
-            const modal = document.createElement('div');
-            modal.id = 'igx-shortcut-modal';
-            // 크기 70% 슬림화(패딩 축소 24px -> 16px) 및 최하단 밀착(bottom: 8px)
-            modal.style.cssText = `
-                display: none; position: fixed; bottom: 8px; left: 5%; right: 5%; 
-                background: #242424; border: 1px solid #444; border-radius: 12px; 
-                padding: 16px; z-index: 999999; box-shadow: 0 8px 30px rgba(0,0,0,0.5);
-                font-family: 'Pretendard', sans-serif;
-            `;
-
-            // 상단 툴바 (볼드 제외 및 원래 버튼 클래스로 복원)
-            const topToolbar = document.createElement('div');
-            topToolbar.style.cssText = "display: flex; gap: 6px; margin-bottom: 10px; justify-content: flex-start; align-items: center;";
-
-            const symbols = [
-                { icon: '★', open: '*', close: '*' },
-                { icon: '♠', open: '"', close: '"' },
-                { icon: '♤', open: "'", close: "'" },
-                { icon: '◆', open: '`', close: '`' },
-                { icon: '■', open: '[', close: ']' },
-                { icon: '♣', open: '(OOC：', close: ')' }
-            ];
-
-            symbols.forEach(s => {
-                const btn = document.createElement('button');
-                btn.className = "relative inline-flex items-center justify-center rounded-full text-sm font-medium transition-colors border border-border bg-card text-line-gray-1 hover:bg-secondary p-0 size-7";
-                btn.type = "button";
-                btn.style.cursor = 'pointer';
-                btn.innerHTML = `<span style="font-size:15px; font-weight: normal;">${s.icon}</span>`; // 볼드체 제외
-                btn.onmousedown = (e) => e.preventDefault();
-                btn.onclick = (e) => {
-                    e.preventDefault();
-                    insertSymbolAndCenter(s.open, s.close);
-                };
-                topToolbar.appendChild(btn);
-            });
-
-            // 입력 텍스트박스 (높이 보존, 폰트 1px 확대 및 스크롤 터치 간섭 완전 배제)
-            const textarea = document.createElement('textarea');
-            textarea.id = 'igx-shortcut-textarea';
-            textarea.placeholder = "여기에 대사를 입력하세요...";
-            textarea.style.cssText = `
-                width: 100%; height: 130px; background: rgba(0,0,0,0.2); 
-                border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; 
-                padding: 8px; color: #eee; font-size: 13px; resize: none; 
-                outline: none; font-family: inherit; overflow-y: auto;
-                overscroll-behavior: contain;
-            `;
-
-            // 모바일 스크롤 드래그 시 배경 밀림 차단 버그 패치
-            const stopScrollBubbling = (e) => {
-                e.stopPropagation();
-            };
-            textarea.addEventListener('touchstart', stopScrollBubbling, { passive: true });
-            textarea.addEventListener('touchmove', stopScrollBubbling, { passive: true });
-
-            // 하단 조작 버튼 구성 (컴팩트 소형화 완료)
-            const bottomToolbar = document.createElement('div');
-            bottomToolbar.style.cssText = "display: flex; justify-content: center; gap: 12px; margin-top: 10px;";
-
-            const cancelBtn = document.createElement('button');
-            cancelBtn.id = 'igx-shortcut-cancel';
-            cancelBtn.textContent = '취소';
-            cancelBtn.style.cssText = `
-                border: 1px solid rgba(255,255,255,0.1); background: transparent; 
-                border-radius: 6px; padding: 4px 14px; font-size: 11px; color: #ccc; 
-                cursor: pointer; font-weight: 500; min-width: 65px; height: 28px;
-                display: inline-flex; align-items: center; justify-content: center;
-            `;
-
-            const insertBtn = document.createElement('button');
-            insertBtn.id = 'igx-shortcut-insert';
-            insertBtn.textContent = '입력';
-            insertBtn.style.cssText = `
-                background: #FFA600; border: none; border-radius: 6px; 
-                padding: 4px 14px; font-size: 11px; color: #000; 
-                font-weight: 700; cursor: pointer; min-width: 65px; height: 28px;
-                display: inline-flex; align-items: center; justify-content: center;
-            `;
-
-            bottomToolbar.append(cancelBtn, insertBtn);
-            modal.append(topToolbar, textarea, bottomToolbar);
-            document.body.appendChild(modal);
-
-            cancelBtn.onclick = closeShortcutModal;
-            insertBtn.onclick = insertShortcutText;
-        }
-
-        function closeShortcutModal() {
-            const modal = document.getElementById('igx-shortcut-modal');
-            if (modal) modal.style.display = 'none';
-        }
-
-        // 입력 시 전체 대체 동기화
-        function insertShortcutText() {
-            const textarea = document.getElementById('igx-shortcut-textarea');
-            if (!textarea) return;
-            const text = textarea.value;
-            const mainInput = getSafeMainInput();
-            if (mainInput) {
-                window.allowNativeFocus = true; // 임시 허용
-                mainInput.focus();
-                
-                // 기존 내용을 전체 선택(selectAll) 후 교체하여 완벽 수정 동기화
-                document.execCommand('selectAll', false, null);
-                document.execCommand("insertText", false, text);
-                
-                setTimeout(() => { 
-                    window.allowNativeFocus = false; 
-                    mainInput.blur(); 
-                }, 100);
-            }
-            closeShortcutModal();
-        }
-
-        window.openShortcutModal = function () {
-            createShortcutModal();
-            const modal = document.getElementById('igx-shortcut-modal');
-            const textarea = document.getElementById('igx-shortcut-textarea');
-            const cancelBtn = document.getElementById('igx-shortcut-cancel');
-            if (!modal || !textarea) return;
-
-            const mainInput = getSafeMainInput();
-            let existingText = '';
-            if (mainInput) {
-                const isEditor = mainInput.tagName !== 'TEXTAREA' && mainInput.isContentEditable;
-                // 내용 편집 동기화: Tiptap 내 기보유 텍스트 안전 추출 및 정제
-                existingText = isEditor ? mainInput.innerText.replace(/\n$/, '') : mainInput.value;
-
-                let bg = '#242424';
-                let current = mainInput;
-                while (current && current !== document.body) {
-                    const cBg = getComputedStyle(current).backgroundColor;
-                    if (cBg && cBg !== 'rgba(0, 0, 0, 0)' && cBg !== 'transparent') {
-                        bg = cBg;
-                        break;
-                    }
-                    current = current.parentElement;
-                }
-                const match = bg.match(/\d+/g);
-                const isDark = match && match.length >= 3 ? (0.2126 * (+match[0]) + 0.7152 * (+match[1]) + 0.0722 * (+match[2])) < 128 : true;
-                
-                modal.style.background = isDark ? '#242424' : '#ffffff';
-                modal.style.borderColor = isDark ? '#444' : '#e5e5e5';
-                textarea.style.color = isDark ? '#eee' : '#111';
-                textarea.style.background = isDark ? 'rgba(0,0,0,0.2)' : 'rgba(0,0,0,0.03)';
-                textarea.style.borderColor = isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)';
-                
-                if (cancelBtn) {
-                    cancelBtn.style.color = isDark ? '#ccc' : '#444';
-                    cancelBtn.style.borderColor = isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.15)';
-                }
-            }
-
-            modal.style.display = 'block';
-            textarea.value = existingText; // 편집하던 글을 그대로 팝업으로 연동
-
-            setTimeout(() => {
-                textarea.focus();
-                // 커서를 항상 텍스트의 끝으로 보냄
-                textarea.setSelectionRange(textarea.value.length, textarea.value.length);
-            }, 50);
-        };
+        window.isSyncingText = false;
     }
 
-    // ==========================================
-    // 메인 TIPTAP 클릭 감지 및 차단 관리자 (중앙 클릭 버그용 오버레이)
-    // ==========================================
-    function updateOverlay() {
+    function setupInPlaceTextarea() {
+        const tiptap = getSafeMainInput();
+        if (!tiptap) return;
+
+        const parent = tiptap.parentElement;
+        if (!parent) return;
+
+        // 슬래시 모드가 활성화되어 있다면 대치하지 않음
         if (window.allowNativeFocus) {
-            const overlay = document.getElementById('igx-tiptap-overlay');
-            if (overlay) overlay.style.display = 'none';
+            const existOverlay = document.getElementById('igx-native-textarea-overlay');
+            if (existOverlay) existOverlay.style.display = 'none';
             return;
         }
 
-        const inputEl = getSafeMainInput();
-        if (!inputEl) return;
+        let myTextarea = document.getElementById('igx-native-textarea-overlay');
+        if (!myTextarea) {
+            // TIPTAP을 완전 삭제하지 않고, 투명 비가시화 처리하여 포커싱/명령어 가동 상태 유지
+            tiptap.style.position = 'absolute';
+            tiptap.style.opacity = '0';
+            tiptap.style.pointerEvents = 'none';
+            tiptap.style.zIndex = '-1';
+            tiptap.style.width = '1px';
+            tiptap.style.height = '1px';
 
-        const parent = inputEl.parentElement;
-        if (!parent) return;
+            // 그 자리에 똑같이 들어설 안정적인 모바일용 네이티브 textarea 박스 생성
+            myTextarea = document.createElement('textarea');
+            myTextarea.id = 'igx-native-textarea-overlay';
+            myTextarea.placeholder = "메시지를 입력하세요...";
+            
+            // 기존 TIPTAP 디자인 및 사용자가 지정한 크기/줄높이(13.5px)를 그대로 계승
+            myTextarea.style.cssText = `
+                width: 100%;
+                min-height: 44px;
+                max-height: 240px;
+                background: transparent;
+                border: none;
+                outline: none;
+                resize: none;
+                font-family: inherit;
+                font-size: 13.5px;
+                line-height: 1.6;
+                padding: 4px 8px;
+                color: inherit;
+                overflow-y: auto;
+                overscroll-behavior: contain;
+                display: block;
+            `;
 
-        if (getComputedStyle(parent).position === 'static') {
-            parent.style.position = 'relative';
-        }
+            // 모바일 터치 드래그 스크롤 간섭 버그 완벽 차단
+            const stopScroll = (e) => e.stopPropagation();
+            myTextarea.addEventListener('touchstart', stopScroll, { passive: true });
+            myTextarea.addEventListener('touchmove', stopScroll, { passive: true });
 
-        let overlay = document.getElementById('igx-tiptap-overlay');
-        if (!overlay) {
-            overlay = document.createElement('div');
-            overlay.id = 'igx-tiptap-overlay';
-            // 입력창 전체 영역을 완벽하게 투명 오버레이로 감싸 클릭 오류(ProseMirror 충돌) 원천 차단
-            overlay.style.cssText = "position: absolute; top: 0; left: 0; right: 0; bottom: 0; z-index: 50; cursor: pointer; background: transparent; pointer-events: auto;";
-            parent.appendChild(overlay);
+            // 입력값 실시간 역방향 동기화
+            myTextarea.addEventListener('input', () => {
+                syncSeamless(myTextarea.value);
+            });
 
-            const triggerOpen = (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                if (typeof window.openShortcutModal === 'function') {
-                    window.openShortcutModal();
-                }
-            };
-            overlay.addEventListener('pointerdown', triggerOpen, true);
-            overlay.addEventListener('click', triggerOpen, true);
+            parent.appendChild(myTextarea);
+
+            // 초기 동기화
+            const isEditor = tiptap.tagName !== 'TEXTAREA' && tiptap.isContentEditable;
+            myTextarea.value = isEditor ? tiptap.innerText.replace(/\n$/, '') : tiptap.value;
         } else {
-            overlay.style.display = 'block';
+            myTextarea.style.display = 'block';
+        }
+    }
+
+    // 슬래시 명령어 선택 등으로 내부 TIPTAP에 강제 변화가 생기면 네이티브 텍스트박스로 반영
+    function handleBiDirectionalSync() {
+        const tiptap = getSafeMainInput();
+        const myTextarea = document.getElementById('igx-native-textarea-overlay');
+        if (!tiptap || !myTextarea) return;
+
+        if (document.activeElement === tiptap) {
+            const isEditor = tiptap.tagName !== 'TEXTAREA' && tiptap.isContentEditable;
+            const text = isEditor ? tiptap.innerText.replace(/\n$/, '') : tiptap.value;
+            if (myTextarea.value !== text) {
+                myTextarea.value = text;
+            }
         }
     }
 
@@ -1214,7 +1136,8 @@
             }
         }, 1000);
 
-        setInterval(updateOverlay, 300);
+        setInterval(setupInPlaceTextarea, 300);
+        setInterval(handleBiDirectionalSync, 100);
 
         try {
             setTimeout(() => {
@@ -1228,7 +1151,6 @@
             try { initAutoSaver();   } catch (e) { console.error("[ 9in1 통합팩 ] 임시저장 모듈 오류:", e); }
             try { initRadiosonde();  } catch (e) { console.error("[ 9in1 통합팩 ] 라디오존데 모듈 오류:", e); }
             try { initAutoScroll();  } catch (e) { console.error("[ 9in1 통합팩 ] 오토스크롤 모듈 오류:", e); }
-            try { initShortcutHelper(); } catch (e) { console.error("[ 9in1 통합팩 ] 단축어 팝업 모듈 오류:", e); }
         } catch(e) {
             console.error("[ 9in1 통합팩 ] 치명적인 시작 오류 발생:", e);
         }
